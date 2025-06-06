@@ -1,3 +1,12 @@
-﻿Funcao main Recebe Nada e Retorna Nada
+﻿str strNotInit;
+str strInit := "Hello";
+int intNotInit;
+int intInit1 := 42;
+int intInit2 := -100;
+bool boolNotInit;
+bool boolInit1 := true;
+bool boolInit2 := false;
+
+Funcao main Recebe int argc, str argv e Retorna Nada
     
 Fim Funcao

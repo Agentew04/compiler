@@ -47,6 +47,25 @@ public class FortallVisitor : FortallBaseVisitor<AstNode>
         return null;
     }
 
+    public override AstNode VisitField(FortallParser.FieldContext ctx)
+    {
+        Type type = VisitType(ctx.TYPE());
+        string name = ctx.ID().ToString() ?? "null";
+        ConstantNode? constant = null;
+        if (ctx.constant() != null)
+        {
+             constant = (ConstantNode)VisitConstant(ctx.constant());
+        }
+
+        Console.WriteLine($"Campo {name} de tipo {type} {(constant == null ? "sem valor" : $"com valor {constant.Value}")}");
+        return new FieldDeclarationNode()
+        {
+            FieldName = name,
+            FieldType = type,
+            InitValue = constant
+        };
+    }
+    
     public override AstNode VisitFunction(FortallParser.FunctionContext ctx)
     {
         string functionName = ctx.ID().ToString() ?? "null";
@@ -57,18 +76,55 @@ public class FortallVisitor : FortallBaseVisitor<AstNode>
             parameterNodes.AddRange(parameters.param().Select(paramCtx => (ParameterNode)VisitParam(paramCtx)));
         }
 
-        Type returnType = VisitType(ctx.TYPE());  
+        Type returnType = VisitType(ctx.TYPE());
 
+        List<StatementNode> body = [];
+        if (ctx.block() != null)
+        {
+            body.AddRange(ctx.block().statement().Select(stmtCtx => (StatementNode)VisitStatement(stmtCtx)));
+        }
+
+        Console.WriteLine("Funcao {0} com {1} parametros, tipo de retorno {2} e {3} statements", functionName, parameterNodes.Count, returnType, body.Count);
         return new FunctionNode()
         {
             Name = functionName,
             Parameters = parameterNodes,
             ReturnType = returnType,
-            // Body = (BlockNode)VisitBlock(ctx.block())
+            Body = body
         };
     }
 
-    public Type VisitType(ITerminalNode type)
+    public override AstNode VisitParam(FortallParser.ParamContext ctx)
+    {
+        Type type = VisitType(ctx.TYPE());
+        string name = ctx.ID().ToString() ?? "null";
+        Console.WriteLine($"Parametro {name} de tipo {type}");
+        return new ParameterNode()
+        {
+            Name = name,
+            ParameterType = type
+        };
+    }
+
+    public override AstNode VisitConstant(FortallParser.ConstantContext ctx)
+    {
+        if (ctx.STRING() != null)
+        {
+            return new ConstantNode(Type.String, ctx.STRING().ToString() ?? "");
+        }
+        if (ctx.NUMBER() != null)
+        {
+            return new ConstantNode(Type.Integer, int.Parse(ctx.NUMBER().ToString() ?? "0"));
+        }
+        if (ctx.BOOL() != null)
+        {
+            return new ConstantNode(Type.Boolean, ctx.BOOL().ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false);
+        }
+        Console.WriteLine("Erro: constante nao reconhecida");
+        return null;
+    }
+
+    private static Type VisitType(ITerminalNode? type)
     {
         if (type is null)
         {

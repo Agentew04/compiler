@@ -33,8 +33,8 @@ expression
 Lexer
 */
 TYPE: 'int' | 'bool' | 'str';
-ID: [a-zA-Z_][a-zA-Z0-9_]*;
-NUMBER: [0-9]+;
-STRING: '"' (~["\r\n])* '"';
 BOOL: 'true' | 'false';
+ID: [a-zA-Z_][a-zA-Z0-9_]*;
+NUMBER: ('-')?[0-9]+;
+STRING: '"' (~["\r\n])* '"';
 WS: [ \t\r\n]+ -> skip; // Skip whitespace
