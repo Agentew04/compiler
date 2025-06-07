@@ -6,9 +6,11 @@ namespace FortallCompiler.Antlr;
 
 public partial class FortallVisitor : FortallBaseVisitor<AstNode>
 {
-    public override AstNode VisitProgram(FortallParser.ProgramContext ctx)
-    {
-        ProgramNode program = new();
+    public override AstNode VisitProgram(FortallParser.ProgramContext ctx) {
+        ProgramNode program = new() {
+            LineNumber = 0,
+            ColumnNumber = 0
+        };
         foreach (var node in ctx.toplevel())
         {
             program.TopLevelNodes.Add((TopLevelNode)VisitToplevel(node));
@@ -25,7 +27,6 @@ public partial class FortallVisitor : FortallBaseVisitor<AstNode>
             return program;
         }
 
-        Console.WriteLine("Program with {0} top-level nodes", program.TopLevelNodes.Count);
         return program;
     }
 
@@ -54,12 +55,13 @@ public partial class FortallVisitor : FortallBaseVisitor<AstNode>
              constant = (ConstantNode)VisitConstant(ctx.constant());
         }
 
-        Console.WriteLine($"Campo {name} de tipo {type} {(constant == null ? "sem valor" : $"com valor {constant.Value}")}");
         return new FieldDeclarationNode()
         {
             FieldName = name,
             FieldType = type,
-            InitValue = constant
+            InitValue = constant,
+            LineNumber = ctx.Start.Line,
+            ColumnNumber = ctx.Start.Column
         };
     }
     
@@ -77,13 +79,14 @@ public partial class FortallVisitor : FortallBaseVisitor<AstNode>
 
         BlockNode block = (BlockNode)VisitBlock(ctx.block());
         
-        Console.WriteLine("Funcao {0} com {1} parametros, tipo de retorno {2} e {3} statements", functionName, parameterNodes.Count, returnType, block.Statements.Count);
         return new FunctionNode()
         {
             Name = functionName,
             Parameters = parameterNodes,
             ReturnType = returnType,
-            Body = block
+            Body = block,
+            LineNumber = ctx.Start.Line,
+            ColumnNumber = ctx.Start.Column
         };
     }
 
@@ -91,11 +94,12 @@ public partial class FortallVisitor : FortallBaseVisitor<AstNode>
     {
         Type type = VisitType(ctx.TYPE());
         string name = ctx.ID().GetText();
-        Console.WriteLine($"Parametro {name} de tipo {type}");
         return new ParameterNode()
         {
             Name = name,
-            ParameterType = type
+            ParameterType = type,
+            LineNumber = ctx.Start.Line,
+            ColumnNumber = ctx.Start.Column
         };
     }
 
@@ -103,15 +107,24 @@ public partial class FortallVisitor : FortallBaseVisitor<AstNode>
     {
         if (ctx.STRING() != null)
         {
-            return new ConstantNode(Type.String, ctx.STRING().ToString() ?? "");
+            return new ConstantNode(Type.String, ctx.STRING().ToString() ?? "") {
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column
+            };
         }
         if (ctx.NUMBER() != null)
         {
-            return new ConstantNode(Type.Integer, int.Parse(ctx.NUMBER().ToString() ?? "0"));
+            return new ConstantNode(Type.Integer, int.Parse(ctx.NUMBER().ToString() ?? "0")){
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column
+            };
         }
         if (ctx.BOOL() != null)
         {
-            return new ConstantNode(Type.Boolean, ctx.BOOL().ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false);
+            return new ConstantNode(Type.Boolean, ctx.BOOL().ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false){
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column
+            };
         }
         Console.WriteLine("Erro: constante nao reconhecida");
         return null!;
@@ -132,10 +145,11 @@ public partial class FortallVisitor : FortallBaseVisitor<AstNode>
                 }
             }
         }
-        Console.WriteLine("Bloco com {0} statements", statementNodes.Count);
         return new BlockNode()
         {
-            Statements = statementNodes
+            Statements = statementNodes,
+            LineNumber = ctx.Start.Line,
+            ColumnNumber = ctx.Start.Column
         };
     }
 
@@ -162,11 +176,15 @@ public partial class FortallVisitor : FortallBaseVisitor<AstNode>
             var callExpression = (FunctionCallExpressionNode)VisitFunctionCall(ctx.functionCall());
             return new FunctionCallStatementNode()
             {
-                FunctionCallExpression = callExpression
+                FunctionCallExpression = callExpression,
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column
             };
         }
-        Console.WriteLine("Statement Vazio");
-        return new EmptyStatement();
+        return new EmptyStatement() {
+            LineNumber = ctx.Start.Line,
+            ColumnNumber = ctx.Start.Column
+        };
     }
 
     public override AstNode VisitFunctionCall(FortallParser.FunctionCallContext ctx) {
@@ -177,11 +195,13 @@ public partial class FortallVisitor : FortallBaseVisitor<AstNode>
         {
             arguments.AddRange(exprs.Select(expr => (ExpressionNode)VisitExpression(expr)));
         }
-        Console.WriteLine($"Chamada de funcao {functionName} com {arguments.Count} argumentos");
         return new FunctionCallExpressionNode()
         {
             FunctionName = functionName,
-            Arguments = arguments
+            Arguments = arguments,
+            LineNumber = ctx.Start.Line,
+            ColumnNumber = ctx.Start.Column,
+            ExpressionType = Type.Void
         };
     }
 

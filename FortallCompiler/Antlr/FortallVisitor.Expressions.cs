@@ -1,4 +1,5 @@
 ﻿using FortallCompiler.Ast;
+using Type = FortallCompiler.Ast.Type;
 
 namespace FortallCompiler.Antlr;
 
@@ -20,7 +21,10 @@ public partial class FortallVisitor {
             {
                 Operation = ParseBinaryOperationType(op),
                 Left = left,
-                Right = right
+                Right = right,
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column,
+                ExpressionType = Type.Boolean
             };
         }
 
@@ -40,7 +44,10 @@ public partial class FortallVisitor {
             {
                 Operation = ParseBinaryOperationType(op),
                 Left = left,
-                Right = right
+                Right = right,
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column,
+                ExpressionType = Type.Boolean
             };
         }
 
@@ -60,7 +67,10 @@ public partial class FortallVisitor {
             {
                 Operation = ParseBinaryOperationType(op),
                 Left = left,
-                Right = right
+                Right = right,
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column,
+                ExpressionType = Type.Boolean
             };
         }
 
@@ -80,7 +90,10 @@ public partial class FortallVisitor {
             {
                 Operation = ParseBinaryOperationType(op),
                 Left = left,
-                Right = right
+                Right = right,
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column,
+                ExpressionType = Type.Boolean
             };
         }
 
@@ -100,7 +113,10 @@ public partial class FortallVisitor {
             {
                 Operation = ParseBinaryOperationType(op),
                 Left = left,
-                Right = right
+                Right = right,
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column,
+                ExpressionType = Type.Integer
             };
         }
 
@@ -120,7 +136,10 @@ public partial class FortallVisitor {
             {
                 Operation = ParseBinaryOperationType(op),
                 Left = left,
-                Right = right
+                Right = right,
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column,
+                ExpressionType = Type.Integer
             };
         }
 
@@ -134,7 +153,10 @@ public partial class FortallVisitor {
             return new UnaryExpressionNode()
             {
                 Operation = UnaryOperationType.Not,
-                Operand = (ExpressionNode)Visit(ctx.unaryExpr())
+                Operand = (ExpressionNode)Visit(ctx.unaryExpr()),
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column,
+                ExpressionType = Type.Boolean
             };
         }
 
@@ -145,7 +167,12 @@ public partial class FortallVisitor {
     {
         if (ctx.ID() != null)
         {
-            return new IdentifierExpressionNode() { Name = ctx.ID().GetText() };
+            return new IdentifierExpressionNode() {
+                Name = ctx.ID().GetText(),
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column,
+                ExpressionType = Type.Void
+            };
         }
 
         if (ctx.constant() != null)
@@ -153,18 +180,28 @@ public partial class FortallVisitor {
             var text = ctx.constant().GetText();
 
             object value;
-
+            Type type;
             if (ctx.constant().NUMBER() != null) {
                 value = int.Parse(text);
+                type = Type.Integer;
             }else if (ctx.constant().STRING() != null) {
                 value = text.Trim('"'); // remove aspas
+                type = Type.String;
             }else if (ctx.constant().BOOL() != null) {
                 value = text == "true";
+                type = Type.Boolean;
             }else {
                 value = null!;
+                type = Type.Void;
             }
 
-            return new LiteralExpressionNode() { Value = value };
+            return new LiteralExpressionNode() {
+                Value = value,
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column,
+                ExpressionType = type,
+                Type = type
+            };
         }
 
         if (ctx.functionCall() != null) {

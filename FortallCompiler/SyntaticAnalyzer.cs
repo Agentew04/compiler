@@ -4,9 +4,9 @@ using FortallCompiler.Ast;
 
 namespace FortallCompiler;
 
-public static class SyntaticAnalyzer {
+public class SyntaticAnalyzer {
 
-    public static (ProgramNode? program, bool success, List<Diagnostic> diagnostics) Parse(Stream inputStream) {
+    public (ProgramNode? program, bool success, List<Diagnostic> diagnostics) Analyze(Stream inputStream) {
         List<Diagnostic> diagnostics = [];
         AntlrInputStream input = new(inputStream);
         FortallLexer lexer = new(input);

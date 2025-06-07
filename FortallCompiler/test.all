@@ -30,3 +30,6 @@ Fim Funcao
 Funcao printa Recebe str s e Retorna Nada
     Escrever s;
 Fim Funcao
+Funcao printa Recebe Nada e Retorna Nada
+Fim Funcao
+str teste := 5;

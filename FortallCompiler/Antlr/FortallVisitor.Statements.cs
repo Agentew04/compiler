@@ -4,31 +4,33 @@ using Type = FortallCompiler.Ast.Type;
 namespace FortallCompiler.Antlr;
 
 public partial class FortallVisitor {
-    public override AstNode VisitDeclaration(FortallParser.DeclarationContext context) {
-        Type type = VisitType(context.TYPE());
-        string variableName = context.ID().GetText();
+    public override AstNode VisitDeclaration(FortallParser.DeclarationContext ctx) {
+        Type type = VisitType(ctx.TYPE());
+        string variableName = ctx.ID().GetText();
         ExpressionNode? expressionNode = null;
-        if (context.expression() != null)
+        if (ctx.expression() != null)
         {
-            expressionNode = (ExpressionNode)VisitExpression(context.expression());
+            expressionNode = (ExpressionNode)VisitExpression(ctx.expression());
         }
-        Console.WriteLine($"Declaracao de variavel {variableName} de tipo {type} {(expressionNode == null ? "sem valor inicial" : $"com valor inicial {context.expression().GetText()}")}");
         return new VariableDeclarationNode()
         {
             VariableName = variableName,
             VariableType = type,
-            InitValue = expressionNode
+            InitValue = expressionNode,
+            LineNumber = ctx.Start.Line,
+            ColumnNumber = ctx.Start.Column
         };
     }
 
     public override AstNode VisitAssignment(FortallParser.AssignmentContext ctx) {
         string variableName = ctx.ID().GetText();
         ExpressionNode expressionNode = (ExpressionNode)VisitExpression(ctx.expression());
-        Console.WriteLine($"Atribuicao de {variableName} com valor {ctx.expression().GetText()}");
         return new AssignmentNode()
         {
             VariableName = variableName,
-            AssignedValue = expressionNode
+            AssignedValue = expressionNode,
+            LineNumber = ctx.Start.Line,
+            ColumnNumber = ctx.Start.Column
         };
     }
 
@@ -40,23 +42,25 @@ public partial class FortallVisitor {
         {
             elseBlock = (BlockNode)VisitBlock(ctx.block(1));
         }
-        Console.WriteLine($"If statement with condition {ctx.expression().GetText()}");
         return new IfStatementNode()
         {
             Condition = condition,
             ThenBlock = thenBlock,
-            ElseBlock = elseBlock
+            ElseBlock = elseBlock,
+            LineNumber = ctx.Start.Line,
+            ColumnNumber = ctx.Start.Column
         };
     }
 
     public override AstNode VisitWhileStatement(FortallParser.WhileStatementContext ctx) {
         ExpressionNode condition = (ExpressionNode)VisitExpression(ctx.expression());
         BlockNode block = (BlockNode)VisitBlock(ctx.block());
-        Console.WriteLine($"While statement with condition {ctx.expression().GetText()}");
         return new WhileStatementNode()
         {
             Condition = condition,
-            Body = block
+            Body = block,
+            LineNumber = ctx.Start.Line,
+            ColumnNumber = ctx.Start.Column
         };
     }
 
@@ -66,10 +70,11 @@ public partial class FortallVisitor {
         {
             expressionNode = (ExpressionNode)VisitExpression(ctx.expression());
         }
-        Console.WriteLine($"Return statement with value {ctx.expression()?.GetText() ?? "none"}");
         return new ReturnStatementNode()
         {
-            Expression = expressionNode
+            Expression = expressionNode,
+            LineNumber = ctx.Start.Line,
+            ColumnNumber = ctx.Start.Column
         };
     }
 
@@ -77,11 +82,15 @@ public partial class FortallVisitor {
         if (ctx.expression() != null) {
             return new WriteNode() {
                 Expression = (ExpressionNode)VisitExpression(ctx.expression()),
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column
             };
         }
         if (ctx.ID() != null) {
             return new ReadNode() {
                 VariableName = ctx.ID().GetText(),
+                LineNumber = ctx.Start.Line,
+                ColumnNumber = ctx.Start.Column
             };
         }
         Console.WriteLine("Erro: io statement nao reconhecido");
