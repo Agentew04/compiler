@@ -12,23 +12,26 @@ function: 'Funcao' ID 'Recebe' (paramList| 'Nada') 'e Retorna' (TYPE|'Nada') blo
 paramList: param (',' param)*;
 param: TYPE ID;
 block: statement*;
-statement: declaration | assignment | ifStatement | whileStatement | returnStatement | ioStatement;
+statement: declaration | assignment | ifStatement | whileStatement | returnStatement | ioStatement | (functionCall';') | ';';
+functionCall: ID '(' (expression (',' expression)*)? ')';
 declaration: TYPE ID ';' | TYPE ID ':=' expression ';';
 assignment: ID ':=' expression ';';
 ifStatement: 'Se' expression 'Entao' block ('Senao' block)? 'Fim Se';
 whileStatement: 'Enquanto' expression 'Faca' block 'Fim Enquanto';
-returnStatement: 'Retorna' expression ';';
+returnStatement: 'Retorna' expression ';' | 'Retorna Nada;';
 ioStatement: 'Escrever' expression ';' | 'Ler' ID ';';
-expression
-    : ID
-    | constant
-    | expression ('*' | '/') expression
-    | expression ('+' | '-') expression
-    | expression ('==' | '!=' | '<' | '>' | '<=' | '>=') expression
-    | '(' expression ')'
-    | expression ('&&' | '||') expression
-    | '!' expression
-    ;
+
+// expression with precedence
+expression: orExpr;
+orExpr: andExpr ('||' andExpr)*;
+andExpr: equalityExpr ('&&' equalityExpr)*;
+equalityExpr: relationalExpr (('==' | '!=') relationalExpr)*;
+relationalExpr: addExpr (('<' | '<=' | '>' | '>=') addExpr)*;
+addExpr: mulExpr (('+' | '-') mulExpr)*;
+mulExpr: unaryExpr (('*' | '/') unaryExpr)*;
+unaryExpr: '!' unaryExpr | primary;
+primary: ID | constant | functionCall | '(' expression ')';
+
 /*
 Lexer
 */

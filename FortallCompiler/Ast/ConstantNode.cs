@@ -1,4 +1,4 @@
-﻿namespace FortallCompiler.AstNodes;
+﻿namespace FortallCompiler.Ast;
 
 public class ConstantNode : AstNode
 {

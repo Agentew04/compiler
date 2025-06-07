@@ -1,11 +1,10 @@
 ﻿using Antlr4.Runtime.Tree;
-using FortallCompiler.Antlr;
-using FortallCompiler.AstNodes;
-using Type = FortallCompiler.AstNodes.Type;
+using FortallCompiler.Ast;
+using Type = FortallCompiler.Ast.Type;
 
-namespace FortallCompiler;
+namespace FortallCompiler.Antlr;
 
-public class FortallVisitor : FortallBaseVisitor<AstNode>
+public partial class FortallVisitor : FortallBaseVisitor<AstNode>
 {
     public override AstNode VisitProgram(FortallParser.ProgramContext ctx)
     {
@@ -17,14 +16,12 @@ public class FortallVisitor : FortallBaseVisitor<AstNode>
 
         if (program.TopLevelNodes.Count == 0)
         {
-            Console.WriteLine("No top-level nodes found in the program.");
             return program;
         }
 
         if (!program.TopLevelNodes.Where(x => x is FunctionNode).Cast<FunctionNode>()
                 .Any(x => x.Name.Equals("main", StringComparison.CurrentCultureIgnoreCase)))
         {
-            Console.WriteLine("Nao achei funcao main");
             return program;
         }
 
@@ -44,13 +41,13 @@ public class FortallVisitor : FortallBaseVisitor<AstNode>
             return VisitFunction(ctx.function());
         }
         Console.WriteLine("Erro: toplevel node nao reconhecido");
-        return null;
+        return null!;
     }
 
     public override AstNode VisitField(FortallParser.FieldContext ctx)
     {
         Type type = VisitType(ctx.TYPE());
-        string name = ctx.ID().ToString() ?? "null";
+        string name = ctx.ID().GetText();
         ConstantNode? constant = null;
         if (ctx.constant() != null)
         {
@@ -68,7 +65,7 @@ public class FortallVisitor : FortallBaseVisitor<AstNode>
     
     public override AstNode VisitFunction(FortallParser.FunctionContext ctx)
     {
-        string functionName = ctx.ID().ToString() ?? "null";
+        string functionName = ctx.ID().GetText();
         FortallParser.ParamListContext? parameters = ctx.paramList();
         List<ParameterNode> parameterNodes = [];
         if (parameters != null)
@@ -78,26 +75,22 @@ public class FortallVisitor : FortallBaseVisitor<AstNode>
 
         Type returnType = VisitType(ctx.TYPE());
 
-        List<StatementNode> body = [];
-        if (ctx.block() != null)
-        {
-            body.AddRange(ctx.block().statement().Select(stmtCtx => (StatementNode)VisitStatement(stmtCtx)));
-        }
-
-        Console.WriteLine("Funcao {0} com {1} parametros, tipo de retorno {2} e {3} statements", functionName, parameterNodes.Count, returnType, body.Count);
+        BlockNode block = (BlockNode)VisitBlock(ctx.block());
+        
+        Console.WriteLine("Funcao {0} com {1} parametros, tipo de retorno {2} e {3} statements", functionName, parameterNodes.Count, returnType, block.Statements.Count);
         return new FunctionNode()
         {
             Name = functionName,
             Parameters = parameterNodes,
             ReturnType = returnType,
-            Body = body
+            Body = block
         };
     }
 
     public override AstNode VisitParam(FortallParser.ParamContext ctx)
     {
         Type type = VisitType(ctx.TYPE());
-        string name = ctx.ID().ToString() ?? "null";
+        string name = ctx.ID().GetText();
         Console.WriteLine($"Parametro {name} de tipo {type}");
         return new ParameterNode()
         {
@@ -121,8 +114,77 @@ public class FortallVisitor : FortallBaseVisitor<AstNode>
             return new ConstantNode(Type.Boolean, ctx.BOOL().ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false);
         }
         Console.WriteLine("Erro: constante nao reconhecida");
-        return null;
+        return null!;
     }
+
+    public override AstNode VisitBlock(FortallParser.BlockContext ctx) {
+        FortallParser.StatementContext[]? stmts = ctx.statement();
+
+        List<StatementNode> statementNodes = [];
+        if (stmts != null)
+        {
+            foreach (var stmt in stmts)
+            {
+                var statementNode = (StatementNode)VisitStatement(stmt);
+                if (statementNode != null)
+                {
+                    statementNodes.Add(statementNode);
+                }
+            }
+        }
+        Console.WriteLine("Bloco com {0} statements", statementNodes.Count);
+        return new BlockNode()
+        {
+            Statements = statementNodes
+        };
+    }
+
+    public override AstNode VisitStatement(FortallParser.StatementContext ctx) {
+        if (ctx.declaration() != null) {
+            return VisitDeclaration(ctx.declaration());
+        }
+        if (ctx.assignment() != null) {
+            return VisitAssignment(ctx.assignment());
+        }
+        if (ctx.ifStatement() != null) {
+            return VisitIfStatement(ctx.ifStatement());
+        }
+        if (ctx.whileStatement() != null) {
+            return VisitWhileStatement(ctx.whileStatement());
+        }
+        if (ctx.returnStatement() != null) {
+            return VisitReturnStatement(ctx.returnStatement());
+        }
+        if (ctx.ioStatement() != null) {
+            return VisitIoStatement(ctx.ioStatement());
+        }
+        if(ctx.functionCall() != null) {
+            var callExpression = (FunctionCallExpressionNode)VisitFunctionCall(ctx.functionCall());
+            return new FunctionCallStatementNode()
+            {
+                FunctionCallExpression = callExpression
+            };
+        }
+        Console.WriteLine("Statement Vazio");
+        return new EmptyStatement();
+    }
+
+    public override AstNode VisitFunctionCall(FortallParser.FunctionCallContext ctx) {
+        string functionName = ctx.ID().GetText();
+        List<ExpressionNode> arguments = [];
+        var exprs = ctx.expression();
+        if (exprs != null)
+        {
+            arguments.AddRange(exprs.Select(expr => (ExpressionNode)VisitExpression(expr)));
+        }
+        Console.WriteLine($"Chamada de funcao {functionName} com {arguments.Count} argumentos");
+        return new FunctionCallExpressionNode()
+        {
+            FunctionName = functionName,
+            Arguments = arguments
+        };
+    }
+
 
     private static Type VisitType(ITerminalNode? type)
     {
@@ -137,6 +199,7 @@ public class FortallVisitor : FortallBaseVisitor<AstNode>
             "bool" => Type.Boolean,
             _ => Type.Void
         };
-        
     }
+    
+    
 }

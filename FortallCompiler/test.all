@@ -7,6 +7,26 @@ bool boolNotInit;
 bool boolInit1 := true;
 bool boolInit2 := false;
 
-Funcao main Recebe int argc, str argv e Retorna Nada
+Funcao main Recebe Nada e Retorna Nada
+    int alice;
+    int bob := (alice*2) + 2 / 1;
     
+    int a;
+    int b;
+    Ler a;
+    Ler b;
+    int c := soma(a, b);
+    ;
+    printa("A soma de a com b eh: ");
+    Escrever c;
+    Escrever "Valeu pela paciencia!";
+Fim Funcao
+
+Funcao soma Recebe int a, int b e Retorna int
+    int resultado := a + b;
+    Retorna resultado;
+Fim Funcao
+
+Funcao printa Recebe str s e Retorna Nada
+    Escrever s;
 Fim Funcao

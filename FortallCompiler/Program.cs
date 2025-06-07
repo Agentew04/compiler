@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using Antlr4.Runtime;
 using FortallCompiler.Antlr;
-using FortallCompiler.AstNodes;
+using FortallCompiler.Ast;
 
 namespace FortallCompiler;
 
@@ -16,27 +16,15 @@ class Program
             return;
         }
 
-        AntlrInputStream input = new(s);
-        FortallLexer lexer = new(input);
-        CommonTokenStream tokens = new(lexer);
-        tokens.Fill();
-        
-        foreach (var token in tokens.GetTokens())
-        {
-            Console.WriteLine($"<{lexer.Vocabulary.GetSymbolicName(token.Type)}> '{token.Text}'");
-        }
-        FortallParser parser = new(tokens);
-        
-        parser.AddErrorListener(new SyntaxErrorListener());
-        
-        FortallParser.ProgramContext? program = parser.program();
+        (ProgramNode? ast, bool success, List<Diagnostic> diagnostics) = SyntaticAnalyzer.Parse(s);
 
-        if (parser.NumberOfSyntaxErrors > 0)
-        {
-            Console.WriteLine("Erro de sintaxe");
+        if (!success || diagnostics.Count > 0) {
+            // mostra erros pro usuario
             return;
         }
-        var visitor = new FortallVisitor();
-        AstNode? ast = visitor.VisitProgram(program);
+        
+        // prossegue com o pipeline
+        // analise semantica agora, ver se faz sentido o codigo gerado
+        // gerar tabelas etc
     }
 }
