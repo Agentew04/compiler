@@ -1,7 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
-using Antlr4.Runtime;
-using FortallCompiler.Antlr;
 using FortallCompiler.Ast;
 
 namespace FortallCompiler;
@@ -10,13 +8,25 @@ class Program
 {
     static void Main(string[] args)
     {
-        Stream? s = Assembly.GetExecutingAssembly()?.GetManifestResourceStream("FortallCompiler.test.all");
-        if (s is null)
+        Stream? s;
+        if (args.Length > 0 && File.Exists(args[0]))
         {
-            Console.WriteLine("sem arquivo test.all");
-            return;
+            string path = args[0];
+            Console.WriteLine($"Utilizando arquivo \"{Path.GetFileName(path)}\"");
+            s = new FileStream(path, FileMode.Open, FileAccess.Read);
+        }
+        else
+        {
+            Console.WriteLine("Utilizando arquivo de teste interno: test.all");
+            s = Assembly.GetExecutingAssembly().GetManifestResourceStream("FortallCompiler.test.all");
         }
 
+        if (s is null)
+        {
+            Console.WriteLine("nao encontrei nenhum arquivo de teste possivel");
+            return;
+        }
+        
         Stopwatch sw = new();
         double totalTime = 0;
 
@@ -26,6 +36,9 @@ class Program
         (ProgramNode? ast, bool success, List<Diagnostic> diagnostics) = syntaticAnalyzer.Analyze(s);
         sw.Stop();
         totalTime += sw.Elapsed.TotalMilliseconds;
+        
+        // libera arquivo original
+        s.Dispose();
 
         if (!success || diagnostics.Count > 0) {
             // mostra erros pro usuario
