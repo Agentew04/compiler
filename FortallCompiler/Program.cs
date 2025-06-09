@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics;
+using System.Reflection;
 using Antlr4.Runtime;
 using FortallCompiler.Antlr;
 using FortallCompiler.Ast;
@@ -16,13 +17,19 @@ class Program
             return;
         }
 
+        Stopwatch sw = new();
+        double totalTime = 0;
+
         Console.WriteLine("Realizando a analise sintatica...");
         SyntaticAnalyzer syntaticAnalyzer = new();
+        sw.Start();
         (ProgramNode? ast, bool success, List<Diagnostic> diagnostics) = syntaticAnalyzer.Analyze(s);
+        sw.Stop();
+        totalTime += sw.Elapsed.TotalMilliseconds;
 
         if (!success || diagnostics.Count > 0) {
             // mostra erros pro usuario
-            Console.WriteLine("Analise sintatica falhou :(");
+            Console.WriteLine($"Analise sintatica falhou em {sw.Elapsed.TotalMilliseconds}ms :(");
             Console.WriteLine("Diagnosticos: ");
             foreach (var diagnostic in diagnostics)
             {
@@ -35,17 +42,21 @@ class Program
             Console.WriteLine("Erro inesperado: AST retornou nulo mas teve sucesso e nao teve diagnosticos :(");
             return;
         }
-        Console.WriteLine("Analise sintatica bem sucedida!");
+        Console.WriteLine($"Analise sintatica bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
+        Console.WriteLine();
         
         // prossegue com o pipeline
         // analise semantica agora, ver se faz sentido o codigo gerado
         // gerar tabelas etc
         Console.WriteLine("Realizando a analise semantica...");
         SemanticAnalyzer semanticAnalyzer = new();
+        sw.Restart();
         (success, diagnostics) = semanticAnalyzer.Analyze(ast);
+        sw.Stop();
+        totalTime += sw.Elapsed.TotalMilliseconds;
         if (!success || diagnostics.Count > 0) {
             // mostra erros pro usuario
-            Console.WriteLine("Analise semantica falhou :(");
+            Console.WriteLine($"Analise semantica falhou em {sw.Elapsed.TotalMilliseconds}ms :(");
             Console.WriteLine("Diagnosticos: ");
             foreach (var diagnostic in diagnostics)
             {
@@ -53,6 +64,27 @@ class Program
             }
             return;
         }
-        Console.WriteLine("Analise semantica bem sucedida!");
+        Console.WriteLine($"Analise semantica bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
+        Console.WriteLine();
+
+        Console.WriteLine("Comecando a geracao de codigo intermediario...");
+        CodeGenerator codeGenerator = new();
+        sw.Restart();
+        codeGenerator.GenerateIlCode(ast);
+        sw.Stop();
+        totalTime += sw.Elapsed.TotalMilliseconds;
+        Console.WriteLine($"Geracao de codigo bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
+        Console.WriteLine();
+
+        Console.WriteLine("Comecando a compilacao com ferramenta externa...");
+        sw.Restart();
+        // TODO: chamar clang e compilar
+        sw.Stop();
+        totalTime += sw.Elapsed.TotalMilliseconds;
+        Console.WriteLine($"Compilacao bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
+        Console.WriteLine();
+
+        Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
+        Console.WriteLine("Executar? (S/n)");
     }
 }
