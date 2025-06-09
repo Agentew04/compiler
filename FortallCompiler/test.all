@@ -13,10 +13,13 @@ Funcao main Recebe Nada e Retorna Nada
     
     int a;
     int b;
+    int c;
     Ler a;
     Ler b;
-    int c := soma(a, b);
+    c := soma(a, b);
     ;
+    str str_teste := "Teste de string";
+    bool invalido := b / 2 == 0;
     printa("A soma de a com b eh: ");
     Escrever c;
     Escrever "Valeu pela paciencia!";
@@ -30,6 +33,9 @@ Fim Funcao
 Funcao printa Recebe str s e Retorna Nada
     Escrever s;
 Fim Funcao
+
+/*
 Funcao printa Recebe Nada e Retorna Nada
 Fim Funcao
 str teste := 5;
+*/
