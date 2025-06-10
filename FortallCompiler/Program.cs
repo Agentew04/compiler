@@ -1,12 +1,13 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
 using FortallCompiler.Ast;
+using FortallCompiler.CodeGeneration.IL;
 
 namespace FortallCompiler;
 
 class Program
 {
-    static void Main(string[] args)
+    private static void Main(string[] args)
     {
         Stream? s;
         if (args.Length > 0 && File.Exists(args[0]))
@@ -58,6 +59,7 @@ class Program
         Console.WriteLine($"Analise sintatica bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
         Console.WriteLine();
         
+        
         // prossegue com o pipeline
         // analise semantica agora, ver se faz sentido o codigo gerado
         // gerar tabelas etc
@@ -80,14 +82,37 @@ class Program
         Console.WriteLine($"Analise semantica bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
         Console.WriteLine();
 
+        
         Console.WriteLine("Comecando a geracao de codigo intermediario...");
         CodeGenerator codeGenerator = new();
         sw.Restart();
-        codeGenerator.GenerateIlCode(ast);
+        ILProgram ilProgram = codeGenerator.GenerateIlCode(ast);
         sw.Stop();
         totalTime += sw.Elapsed.TotalMilliseconds;
         Console.WriteLine($"Geracao de codigo bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
+        
+        Console.WriteLine("Escrevendo codigo intermediario para o disco...");
+        sw.Restart();
+        Console.WriteLine(ilProgram);
+        sw.Stop();
+        totalTime += sw.Elapsed.TotalMilliseconds;
+        Console.WriteLine($"Escrito codigo intermediario no disco em {sw.Elapsed.TotalMilliseconds}ms!");
         Console.WriteLine();
+
+        
+        Console.WriteLine("Traduzindo codigo intermediario assembly MIPS...");
+        sw.Restart();
+        sw.Stop();
+        totalTime += sw.Elapsed.TotalMilliseconds;
+        Console.WriteLine($"Traducao para assembly bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
+        
+        Console.WriteLine("Escrevendo assembly no disco...");
+        sw.Restart();
+        sw.Stop();
+        totalTime += sw.Elapsed.TotalMilliseconds;
+        Console.WriteLine($"Escrito assembly no disco em {sw.Elapsed.TotalMilliseconds}ms!");
+        Console.WriteLine();
+        
 
         Console.WriteLine("Comecando a compilacao com ferramenta externa...");
         sw.Restart();
@@ -100,4 +125,5 @@ class Program
         Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
         Console.WriteLine("Executar? (S/n)");
     }
+
 }

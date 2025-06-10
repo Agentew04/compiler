@@ -17,6 +17,11 @@ Funcao main Recebe Nada e Retorna Nada
     Ler a;
     Ler b;
     c := soma(a, b);
+    Se c > 10 Entao
+        Escrever "A soma eh maior que 10";
+    Senao
+        Retorna
+    Fim Se
     ;
     str str_teste := "Teste de string";
     bool invalido := b / 2 == 0;

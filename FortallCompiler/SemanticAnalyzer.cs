@@ -21,6 +21,8 @@ public class SemanticAnalyzer {
             diagnostics.Add(new Diagnostic("O programa deve conter uma função 'main' definida.", 0,0));
         }
         
+        ast.ScopeData = globalScope;
+        
         // indexar nome das funcoes
         ast.TopLevelNodes
             .Where(x => x is FunctionNode)
@@ -229,6 +231,7 @@ public class SemanticAnalyzer {
 
     private void CheckBlock(BlockNode block, ScopeData scope, Type currentFunctionReturnType)
     {
+        block.ScopeData = scope;
         foreach (StatementNode stmt in block.Statements) {
             // verifica se a variavel declarada ja existe
             if (stmt is VariableDeclarationNode varDeclNode) {
