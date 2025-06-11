@@ -1,46 +1,19 @@
-﻿str strNotInit;
-str strInit := "Hello";
-int intNotInit;
-int intInit1 := 42;
-int intInit2 := -100;
-bool boolNotInit;
-bool boolInit1 := true;
-bool boolInit2 := false;
-
-Funcao main Recebe Nada e Retorna Nada
-    int alice;
-    int bob := (alice*2) + 2 / 1;
-    
-    int a;
-    int b;
-    int c;
-    Ler a;
-    Ler b;
-    c := soma(a, b);
-    Se c > 10 Entao
-        Escrever "A soma eh maior que 10";
+﻿Funcao main Recebe Nada e Retorna Nada
+    int a := 10;
+    int b := 20;
+    int c := a + b;
+    int d := soma(a,b);
+    Se c == d Entao
+        Escrever "A soma esta correta: ";
+        Escrever c;
     Senao
-        Retorna
+        Escrever "A soma esta incorreta: ";
+        Escrever c;
     Fim Se
-    ;
-    str str_teste := "Teste de string";
-    bool invalido := b / 2 == 0;
-    printa("A soma de a com b eh: ");
-    Escrever c;
-    Escrever "Valeu pela paciencia!";
 Fim Funcao
 
-Funcao soma Recebe int a, int b e Retorna int
-    int resultado := a + b;
+Funcao soma Recebe int x, int y e Retorna int
+    int resultado := x + y;
     Retorna resultado;
 Fim Funcao
-
-Funcao printa Recebe str s e Retorna Nada
-    Escrever s;
-Fim Funcao
-
-/*
-Funcao printa Recebe Nada e Retorna Nada
-Fim Funcao
-str teste := 5;
-*/
+    

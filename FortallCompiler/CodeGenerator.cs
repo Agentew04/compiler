@@ -78,12 +78,12 @@ public class CodeGenerator
                 ReleaseTemp(returnValue);
                 break;
             case IfStatementNode ifStmt:
-                string condTemp = Generate(ifStmt.Condition, instructions);
+                string ifCondTemp = Generate(ifStmt.Condition, instructions);
                 string elseLabel = $"{namespaceName}_else_{idx++}";
                 string endIfLabel = $"{namespaceName}_endif_{idx++}";
                 string notCondTemp = GetTemp();
-                instructions.Add(new ILUnaryOp(notCondTemp, UnaryOperationType.Not, condTemp));
-                ReleaseTemp(condTemp);
+                instructions.Add(new ILUnaryOp(notCondTemp, UnaryOperationType.Not, ifCondTemp));
+                ReleaseTemp(ifCondTemp);
                 instructions.Add(new ILIfGoto(notCondTemp, elseLabel));
                 ReleaseTemp(notCondTemp);
 
@@ -103,6 +103,62 @@ public class CodeGenerator
                     }
                 }
                 instructions.Add(new ILLabel(endIfLabel));
+                break;
+            case WhileStatementNode whileStmt:
+                string startLabel = $"{namespaceName}_while_start_{idx++}";
+                string endLabel = $"{namespaceName}_while_end_{idx++}";
+                
+                instructions.Add(new ILLabel(startLabel));
+                
+                string whileCondTemp = Generate(whileStmt.Condition, instructions);
+                string whileNotCondTemp = GetTemp();
+                instructions.Add(new ILUnaryOp(whileNotCondTemp, UnaryOperationType.Not, whileCondTemp));
+                ReleaseTemp(whileCondTemp);
+                instructions.Add(new ILIfGoto(whileNotCondTemp, endLabel));
+                ReleaseTemp(whileNotCondTemp);
+
+                foreach (StatementNode stmt in whileStmt.Body.Statements)
+                {
+                    Generate(stmt, instructions, namespaceName + $"_while{idx-1}body", ref idx);
+                }
+                
+                instructions.Add(new ILGoto(startLabel));
+                instructions.Add(new ILLabel(endLabel));
+                break;
+            case AssignmentNode assignStmt:
+                string valueTemp = Generate(assignStmt.AssignedValue, instructions);
+                instructions.Add(new ILMove(assignStmt.VariableName, valueTemp));
+                ReleaseTemp(valueTemp);
+                break;
+            case WriteNode writeStmt:
+                string writeTemp = Generate(writeStmt.Expression, instructions);
+                instructions.Add(new ILWrite(writeTemp, writeStmt.Expression.ExpressionType));
+                ReleaseTemp(writeTemp);
+                break;
+            case ReadNode readStmt:
+                instructions.Add(new ILRead(readStmt.VariableName));
+                break;
+            case FunctionCallStatementNode funcCallStmt:
+                FunctionCallExpressionNode funcCall = funcCallStmt.FunctionCallExpression;
+                List<string> args = [];
+                args.AddRange(funcCall.Arguments.Select(arg => Generate(arg, instructions)));
+                string tCall = GetTemp();
+                instructions.Add(new ILCall(tCall, funcCall.FunctionName, args));
+                foreach (string arg in args)
+                {
+                    ReleaseTemp(arg);
+                }
+                // como eh um statement, nao precisamos guardar o retorno da func.
+                ReleaseTemp(tCall);
+                break;
+            case VariableDeclarationNode varDecl:
+                if (varDecl.InitValue is null)
+                {
+                    break;
+                }
+                string initValueTemp = Generate(varDecl.InitValue, instructions);
+                instructions.Add(new ILMove(varDecl.VariableName, initValueTemp));
+                ReleaseTemp(initValueTemp);
                 break;
             // TODO: outros statements
         }
@@ -158,7 +214,11 @@ public class CodeGenerator
     
     private void ReleaseTemp(string temp)
     {
-        freeTemps.Push(temp);
+        if (IsTemp(temp))
+        {
+            freeTemps.Push(temp);
+        }
+        
     }
 
     private bool IsTemp(string name) => name.StartsWith('t');
