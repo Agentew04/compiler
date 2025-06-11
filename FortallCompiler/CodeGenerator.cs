@@ -10,10 +10,10 @@ public class CodeGenerator
 {
     ProgramNode program;
 
-    private Stack<string> freeTemps = new();
-    private int tempCounter = 0;
-    // usado para as labels nos ifs e outros statements
-    private string currentFunctionName = "";
+    private readonly Stack<string> freeTemps = new();
+    private int tempCounter;
+    
+    private Dictionary<string, string> stringLiterals = new();
     
     public ILProgram GenerateIlCode(ProgramNode program)
     {
@@ -27,6 +27,16 @@ public class CodeGenerator
             ilGlob.Name = $"_globalvariable__{globalVar.FieldName}";
             ilGlob.Type = globalVar.FieldType;
             ilGlob.Value = globalVar.InitValue?.Value;
+            ilProgram.Globals.Add(ilGlob);
+        }
+        
+        // add string literals as global variables
+        foreach (var strLitKvp in program.StringLiterals)
+        {
+            ILGlobalVariable ilGlob = new();
+            ilGlob.Name = strLitKvp.Key;
+            ilGlob.Type = Type.String;
+            ilGlob.Value = strLitKvp.Value;
             ilProgram.Globals.Add(ilGlob);
         }
         
@@ -160,7 +170,6 @@ public class CodeGenerator
                 instructions.Add(new ILMove(varDecl.VariableName, initValueTemp));
                 ReleaseTemp(initValueTemp);
                 break;
-            // TODO: outros statements
         }
     }
 
@@ -168,6 +177,10 @@ public class CodeGenerator
     {
         switch (expression) {
             case LiteralExpressionNode lit:
+                if (lit.Type == Type.String)
+                {
+                    return lit.StringIdentifier!;
+                }
                 string tLit = GetTemp();
                 instructions.Add(new ILLoad(tLit, lit.Value));
                 return tLit;
@@ -204,12 +217,7 @@ public class CodeGenerator
 
     private string GetTemp()
     {
-        if (freeTemps.Count > 0)
-        {
-            return freeTemps.Pop();
-        }
-
-        return $"t{tempCounter++}";
+        return freeTemps.Count > 0 ? freeTemps.Pop() : $"t{tempCounter++}";
     }
     
     private void ReleaseTemp(string temp)

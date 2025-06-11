@@ -238,7 +238,7 @@ public class SemanticAnalyzer {
             }
             else
             {
-                string identifier = litExpr.StringIdentifier ?? $"string_literal_{stringLiteralCounter++}";
+                string identifier = litExpr.StringIdentifier ?? $"__string_literal_{stringLiteralCounter++}";
                 litExpr.StringIdentifier = identifier;
                 stringLiterals.Add(identifier, literal);
                 invertedStringLiterals.Add(literal, identifier);
