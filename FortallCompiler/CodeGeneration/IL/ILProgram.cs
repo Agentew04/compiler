@@ -7,6 +7,8 @@ public class ILProgram
 {
     public List<ILFunction> Functions { get; set; } = [];
     public List<ILGlobalVariable> Globals { get; set; } = [];
+    
+    public string MainLabel { get; set; }
 
     public override string ToString()
     {

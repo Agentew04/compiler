@@ -30,6 +30,48 @@ public class MipsGenerator
             };
             sw.WriteLine($"{global.Name}: {type} {initialValue}");
         }
+        sw.WriteLine();
+        
+        sw.WriteLine(".text");
+        sw.WriteLine($"j {program.MainLabel}");
+        // agora emite para cada funcao
+        foreach (ILFunction function in program.Functions)
+        {
+            Generate(function, sw);
+        }
+    }
+
+    private void Generate(ILFunction function, StreamWriter sw)
+    {
+        StringBuilder paramSb = new();
+        int i = 0;
+        foreach (string param in function.Paramters)
+        {
+            paramSb.Append($"\n#   {param}: a{i}");
+            i++;
+        }
+        sw.WriteLine($"""
+                      # FUNCAO: {function.Name}
+                      # PARAMETROS:{paramSb}
+                      """);
+        foreach (ILInstruction intruction in function.Instructions)
+        {
+            Generate(intruction, sw);
+        }
+        sw.WriteLine();
+    }
+
+    private void Generate(ILInstruction instruction, StreamWriter sw)
+    {
+        switch (instruction)
+        {
+            case ILLabel label:
+                sw.WriteLine($"{label.Name}:");
+                break;
+            default:
+                sw.WriteLine("INSTRUCAO NAO CONHECIDA");
+                break;
+        }
     }
     
     private string EscapeString(string value)

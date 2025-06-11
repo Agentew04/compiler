@@ -87,6 +87,11 @@ public class SemanticAnalyzer {
     private void CheckFunction(FunctionNode function) {
         ScopeData scope = new();
         scope.ParentScope = globalScope;
+
+        if (function.Parameters.Count > 4)
+        {
+            diagnostics.Add(new Diagnostic("Uma funcao deve ter no maximo 4 parametros.", function.LineNumber, function.ColumnNumber));
+        }
         
         // add parameters to scope
         foreach (ParameterNode param in function.Parameters) {

@@ -5,10 +5,11 @@ using Type = FortallCompiler.Ast.Type;
 
 namespace FortallCompiler;
 
-public class CodeGenerator
+public class IlGenerator
 {
     private readonly Stack<string> freeTemps = new();
     private int tempCounter;
+    private string mainLabel;
     
     public ILProgram GenerateIlCode(ProgramNode program)
     {
@@ -42,6 +43,8 @@ public class CodeGenerator
             ilProgram.Functions.Add(GenerateFunction(function));
         }
         
+        ilProgram.MainLabel = mainLabel;
+        
         return ilProgram;
     }
 
@@ -50,10 +53,14 @@ public class CodeGenerator
         List<string> parameters = [];
         parameters.AddRange(function.Parameters.Select(param => param.Name));
         ILFunction ilFunction = new(function.Name, parameters);
-        
         List<ILInstruction> instructions = [];
         ilFunction.Instructions = instructions;
-        instructions.Add(new ILLabel("__function_" + function.Name));
+        string label = "__function_" + function.Name;
+        if (function.Name == "main")
+        {
+            mainLabel = label;
+        }
+        instructions.Add(new ILLabel(label));
 
         int idx = 0;
         

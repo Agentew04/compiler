@@ -118,9 +118,9 @@ class Program
     private static void IlGeneration(ProgramNode ast, Stopwatch sw, ref double totalTime, Stream outputStream, out ILProgram ilProgram)
     {
         Console.WriteLine("Comecando a geracao de codigo intermediario...");
-        CodeGenerator codeGenerator = new();
+        IlGenerator ilGenerator = new();
         sw.Restart();
-        ilProgram = codeGenerator.GenerateIlCode(ast);
+        ilProgram = ilGenerator.GenerateIlCode(ast);
         sw.Stop();
         totalTime += sw.Elapsed.TotalMilliseconds;
         Console.WriteLine($"Geracao de codigo bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
