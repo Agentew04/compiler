@@ -9,6 +9,10 @@ public class SemanticAnalyzer {
     
     private readonly List<Diagnostic> diagnostics = [];
     
+    private readonly Dictionary<string,string> stringLiterals = new();
+    private readonly Dictionary<string,string> invertedStringLiterals = new();
+    private int stringLiteralCounter = 0;
+    
     public (bool success, List<Diagnostic> diagnostics) Analyze(ProgramNode ast) {
 
         // first step: verificar se o programa tem uma main
@@ -76,6 +80,7 @@ public class SemanticAnalyzer {
             .ForEach(CheckFunction);
 
         
+        ast.StringLiterals = stringLiterals;
         return (diagnostics.Count == 0, diagnostics);
     }
     
@@ -220,8 +225,24 @@ public class SemanticAnalyzer {
         }
         else if (expression is LiteralExpressionNode litExpr)
         {
-            // ja tem o tipo definido
-            // nada a fazer
+            // se for string, indexa nas literais de string
+            if (litExpr.Type != Type.String)
+            {
+                return;
+            }
+
+            string literal = litExpr.Value as string ?? string.Empty;
+            if (invertedStringLiterals.TryGetValue(literal, out string? key))
+            {
+                litExpr.StringIdentifier = key;
+            }
+            else
+            {
+                string identifier = litExpr.StringIdentifier ?? $"string_literal_{stringLiteralCounter++}";
+                litExpr.StringIdentifier = identifier;
+                stringLiterals.Add(identifier, literal);
+                invertedStringLiterals.Add(literal, identifier);
+            }
         }
         else
         {

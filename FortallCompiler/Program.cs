@@ -79,6 +79,7 @@ class Program
             }
             return;
         }
+        Console.WriteLine($"Encontrei {ast.StringLiterals.Count} string literals!");
         Console.WriteLine($"Analise semantica bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
         Console.WriteLine();
 

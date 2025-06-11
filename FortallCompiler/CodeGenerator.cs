@@ -218,7 +218,6 @@ public class CodeGenerator
         {
             freeTemps.Push(temp);
         }
-        
     }
 
     private bool IsTemp(string name) => name.StartsWith('t');
