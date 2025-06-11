@@ -1,5 +1,4 @@
-﻿using System.Linq.Expressions;
-using System.Net.NetworkInformation;
+﻿using System.Text;
 using FortallCompiler.Ast;
 using FortallCompiler.CodeGeneration.IL;
 using Type = FortallCompiler.Ast.Type;
@@ -8,23 +7,18 @@ namespace FortallCompiler;
 
 public class CodeGenerator
 {
-    ProgramNode program;
-
     private readonly Stack<string> freeTemps = new();
     private int tempCounter;
     
-    private Dictionary<string, string> stringLiterals = new();
-    
     public ILProgram GenerateIlCode(ProgramNode program)
     {
-        this.program = program;
         ILProgram ilProgram = new();
 
         // add global variables
         foreach (FieldDeclarationNode globalVar in program.TopLevelNodes.Where(x => x is FieldDeclarationNode).Cast<FieldDeclarationNode>())
         {
             ILGlobalVariable ilGlob = new();
-            ilGlob.Name = $"_globalvariable__{globalVar.FieldName}";
+            ilGlob.Name = $"__global_{globalVar.FieldName}";
             ilGlob.Type = globalVar.FieldType;
             ilGlob.Value = globalVar.InitValue?.Value;
             ilProgram.Globals.Add(ilGlob);
@@ -33,10 +27,12 @@ public class CodeGenerator
         // add string literals as global variables
         foreach (var strLitKvp in program.StringLiterals)
         {
-            ILGlobalVariable ilGlob = new();
-            ilGlob.Name = strLitKvp.Key;
-            ilGlob.Type = Type.String;
-            ilGlob.Value = strLitKvp.Value;
+            ILGlobalVariable ilGlob = new()
+            {
+                Name = strLitKvp.Key,
+                Type = Type.String,
+                Value = strLitKvp.Value
+            };
             ilProgram.Globals.Add(ilGlob);
         }
         
@@ -57,13 +53,13 @@ public class CodeGenerator
         
         List<ILInstruction> instructions = [];
         ilFunction.Instructions = instructions;
-        instructions.Add(new ILLabel("_function__" + function.Name));
+        instructions.Add(new ILLabel("__function_" + function.Name));
 
         int idx = 0;
         
         foreach (StatementNode stmt in function.Body.Statements)
         {
-            Generate(stmt, instructions, $"_function__{function.Name}", ref idx);
+            Generate(stmt, instructions, $"__function_{function.Name}", ref idx);
         }
 
         if (instructions.Count == 0 || instructions.Last() is not ILReturn)
@@ -162,6 +158,7 @@ public class CodeGenerator
                 ReleaseTemp(tCall);
                 break;
             case VariableDeclarationNode varDecl:
+                instructions.Add(new ILVar(varDecl.VariableName, varDecl.VariableType));
                 if (varDecl.InitValue is null)
                 {
                     break;
@@ -229,4 +226,6 @@ public class CodeGenerator
     }
 
     private bool IsTemp(string name) => name.StartsWith('t');
+
+    
 }

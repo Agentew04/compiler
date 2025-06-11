@@ -1,4 +1,11 @@
-﻿Funcao main Recebe Nada e Retorna Nada
+﻿int intglob;
+int var2 := 5;
+str strsemval;
+str strcomval := "teste";
+bool boolvar := true;
+bool boolsemval;
+
+Funcao main Recebe Nada e Retorna Nada
     str prompt := "Digite um numero: ";
     Escrever prompt;
     int a;
