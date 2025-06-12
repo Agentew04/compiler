@@ -27,6 +27,8 @@
     <ItemGroup>
       <None Remove="test.all" />
       <EmbeddedResource Include="test.all" />
+      <None Remove="linker.ld" />
+      <EmbeddedResource Include="linker.ld" />
     </ItemGroup>
 
 </Project>
