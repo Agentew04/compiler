@@ -139,6 +139,11 @@ public class MipsGenerator
             {
                 Generate(goTo, sw, stackAllocator, registerAllocator);
             }
+
+            if (instruction is ILCall call)
+            {
+                Generate(call, sw, stackAllocator, registerAllocator);
+            }
         }
         sw.WriteLine();
     }
@@ -346,6 +351,84 @@ public class MipsGenerator
         // j
         sw.WriteLine($"\tj {goTo.Label} # pula para {goTo.Label}");
     }
+
+    private void Generate(ILCall call, StreamWriter sw, StackAllocator stackAllocator,
+        RegisterAllocator registerAllocator)
+    {
+        if(call.Arguments.Count > 4)
+        {
+            throw new NotSupportedException("Cannot call functions with more than 4 arguments in MIPS.");
+        }
+        // carrega os argumentos nos registradores de argumento
+        for (int i = 0; i < call.Arguments.Count; i++)
+        {
+            ILAddress arg = call.Arguments[i];
+            if (arg.IsTemporary)
+            {
+                // se eh temporario, carrega no registrador de argumento
+                sw.WriteLine($"\tadd $a{i}, {registerAllocator.GetRegister(arg)}, $zero # carrega argumento {i} ({arg})");
+            }
+            else if (arg.IsGlobal)
+            {
+                // se eh global, carrega no registrador de argumento
+                sw.WriteLine($"\tlw $a{i}, {arg.Name} # carrega argumento {i} ({arg})");
+            }
+            else
+            {
+                // se eh stack, carrega no registrador de argumento
+                sw.WriteLine($"\tlw $a{i}, {stackAllocator.GetVariableOffset(arg.Name)}($sp) # carrega argumento {i} ({arg})");
+            }
+        }
+        
+        // argumentos preparados, agora tem que salvar o valor dos temporarios utilizados
+        var used = registerAllocator.GetUsedRegisters();
+        // allocate memory for each used register
+        sw.WriteLine("\t# SALVA TEMPORARIOS");
+        sw.WriteLine($"\taddi $sp, $sp, -{used.Count * 4} # aloca espaco na pilha para temporarios");
+        for (int i = 0; i < used.Count; i++)
+        {
+            string reg = used[i];
+            // save each register to the stack
+            sw.WriteLine($"\tsw {reg}, {i * 4}($sp) # salva {reg} na pilha");
+        }
+        // chama a funcao
+        string funcLabel = null!;
+        foreach (ILFunction func in program.Functions)
+        {
+            if(func.Name != call.FunctionName) continue;
+            funcLabel = func.Label;
+        }
+        sw.WriteLine($"\tjal {funcLabel} # chama funcao {call.FunctionName}");
+        // agora restaura os temporarios
+        sw.WriteLine("\t# RESTAURA TEMPORARIOS");
+        for (int i = used.Count - 1; i >= 0; i--)
+        {
+            string reg = used[i];
+            // restore each register from the stack
+            sw.WriteLine($"\tlw {reg}, {i * 4}($sp) # restaura {reg} da pilha");
+            // n descarta pq ainda vai usar p frente
+        }
+        // desaloca o espaco da pilha dos temporarios
+        sw.WriteLine($"\taddi $sp, $sp, {used.Count * 4} # libera espaco na pilha dos temporarios");
+        
+        // se a funcao tem retorno, pega do v0
+        if (call.Dest is null) return;
+        if (call.Dest.IsTemporary)
+        {
+            // se eh temporario, carrega no registrador de destino
+            sw.WriteLine($"\tadd {registerAllocator.GetRegister(call.Dest)}, $v0, $zero # carrega retorno da funcao em {call.Dest}");
+        }
+        else if (call.Dest.IsGlobal)
+        {
+            // se eh global, carrega no registrador de destino
+            sw.WriteLine($"\tsw $v0, {call.Dest.Name} # armazena retorno da funcao em {call.Dest.Name}");
+        }
+        else
+        {
+            // se eh stack, carrega no registrador de destino
+            sw.WriteLine($"\tsw $v0, {stackAllocator.GetVariableOffset(call.Dest.Name)}($sp) # armazena retorno da funcao em {call.Dest}");
+        }
+    }
     
     private class StackAllocator
     {
@@ -428,6 +511,11 @@ public class MipsGenerator
             tempToRegister.Remove(temp);
             registerToTemp.Remove(register);
             freeRegisters.Enqueue(register);
+        }
+        
+        public List<string> GetUsedRegisters()
+        {
+            return tempToRegister.Values.ToList();
         }
     }
     
