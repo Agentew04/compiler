@@ -32,6 +32,11 @@ public class MipsGenerator
                 bool b => b ? "1" : "0",
                 _ => throw new NotSupportedException($"Unsupported initial value type: {global.Value.GetType()}")
             };
+            if (global.Type == Type.String && global.Value is null)
+            {
+                // tamanho maximo para strings
+                type = ".space 256";
+            }
             sw.WriteLine($"{global.Name}: {type} {initialValue}");
         }
         sw.WriteLine();
@@ -589,8 +594,42 @@ public class MipsGenerator
         }
         // coloca syscall em v0
         sw.WriteLine($"\taddi $v0, $zero, {syscall} # syscall {syscall} para ler {read.ReadType}");
-        // faz syscall
-        
+        // passa argumentos
+        if (read.ReadType == Type.String)
+        {
+            // a0 eh o endereco
+            // a1 eh o tamanho maximo. hardcoded 256 (255 caracteres + \0)
+            
+            if (read.Dest.IsGlobal)
+            {
+                sw.WriteLine($"\tla $a0, {read.Dest.Name} # carrega endereco de {read.Dest.Name} em $a0");
+            }
+            else
+            {
+                // stack
+                sw.WriteLine($"\tadd $a0, $sp, {stackAllocator.GetVariableOffset(read.Dest.Name)} # carrega endereco de {read.Dest.Name} em $a0");
+            }
+            // $at tem o endereco da string
+            sw.WriteLine($"\tadd $a0, $at, $zero # move endereco base da string para $a0");
+            sw.WriteLine($"\taddi $a1, $zero, 256 # tamanho maximo da string lida");
+        }
+        sw.WriteLine($"\tsyscall # faz syscall {syscall}");
+
+        if (read.ReadType == Type.String) return;
+        // resultado esta no $v0
+        if (read.Dest.IsTemporary)
+        {
+            sw.WriteLine($"\tadd {registerAllocator.GetRegister(read.Dest)}, $v0, $zero # armazena resultado de leitura em {read.Dest}");
+        }
+        else if (read.Dest.IsGlobal)
+        {
+            sw.WriteLine($"\tsw $v0, {read.Dest.Name} # armazena resultado de leitura em {read.Dest.Name}");
+        }
+        else
+        {
+            // stack
+            sw.WriteLine($"\tsw $v0, {stackAllocator.GetVariableOffset(read.Dest.Name)}($sp) # armazena resultado de leitura em {read.Dest}");
+        }
     }
     
     private class StackAllocator
