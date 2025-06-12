@@ -124,6 +124,21 @@ public class MipsGenerator
             {
                 Generate(move, sw, stackAllocator, registerAllocator);
             }
+
+            if (instruction is ILIfGoto ifGoto)
+            {
+                Generate(ifGoto, sw, stackAllocator, registerAllocator);
+            }
+
+            if (instruction is ILLabel label)
+            {
+                Generate(label, sw, stackAllocator, registerAllocator);
+            }
+
+            if (instruction is ILGoto goTo)
+            {
+                Generate(goTo, sw, stackAllocator, registerAllocator);
+            }
         }
         sw.WriteLine();
     }
@@ -277,7 +292,7 @@ public class MipsGenerator
         string dest = "$at";
         if (move.Src.IsTemporary)
         {
-            dest = registerAllocator.GetRegister(move.Dest);
+            dest = registerAllocator.GetRegister(move.Src);
         }
         else if (move.Src.IsGlobal)
         {
@@ -303,6 +318,33 @@ public class MipsGenerator
             // stack
             sw.WriteLine($"\tsw {dest}, {stackAllocator.GetVariableOffset(move.Dest.Name)}($sp) # move valor de {move.Src} para {move.Dest}");
         }
+    }
+    
+    private void Generate(ILIfGoto ifGoto, StreamWriter sw, StackAllocator stackAllocator,
+        RegisterAllocator registerAllocator)
+    {
+        // bnez
+        // simplificacao da implementacao
+        // sabemos de ctz q a condicao eh temporaria, pois sempre eh negada
+        if (!ifGoto.Condition.IsTemporary)
+        {
+            throw new NotSupportedException("Condition must be a temporary address. This is a TODO");
+        }
+        string reg = registerAllocator.GetRegister(ifGoto.Condition);
+        sw.WriteLine($"\tbnez {reg}, {ifGoto.Label} # se {ifGoto.Condition} for diferente de zero, pula para {ifGoto.Label}");
+    }
+    
+    private void Generate(ILLabel label, StreamWriter sw, StackAllocator stackAllocator,
+        RegisterAllocator registerAllocator)
+    {
+        sw.WriteLine($"\t{label.Name}: # label {label.Name}");
+    }
+    
+    private void Generate(ILGoto goTo, StreamWriter sw, StackAllocator stackAllocator,
+        RegisterAllocator registerAllocator)
+    {
+        // j
+        sw.WriteLine($"\tj {goTo.Label} # pula para {goTo.Label}");
     }
     
     private class StackAllocator
