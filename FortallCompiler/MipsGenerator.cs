@@ -98,61 +98,44 @@ public class MipsGenerator
         sw.WriteLine("\t# CORPO");
         foreach (ILInstruction instruction in function.Instructions)
         {
-            // pronto
-            if(instruction is ILReturn ret)
+            switch (instruction)
             {
-                Generate(ret, sw, stackAllocator, registerAllocator);
-            }
-
-            // Da pra simplificar isso pois apenas strings usam loadPtr, entao sempre sao globais
-            if (instruction is ILLoadPtr loadPtr)
-            {
-                Generate(loadPtr, sw, stackAllocator, registerAllocator);
-            }
-
-            if (instruction is ILLoad load)
-            {
-                Generate(load, sw, stackAllocator, registerAllocator);
-            }
-
-            if (instruction is ILUnaryOp unaryOp)
-            {
-                Generate(unaryOp, sw, stackAllocator, registerAllocator);
-            }
-
-            if (instruction is ILMove move)
-            {
-                Generate(move, sw, stackAllocator, registerAllocator);
-            }
-
-            if (instruction is ILIfGoto ifGoto)
-            {
-                Generate(ifGoto, sw, stackAllocator, registerAllocator);
-            }
-
-            if (instruction is ILLabel label)
-            {
-                Generate(label, sw, stackAllocator, registerAllocator);
-            }
-
-            if (instruction is ILGoto goTo)
-            {
-                Generate(goTo, sw, stackAllocator, registerAllocator);
-            }
-
-            if (instruction is ILCall call)
-            {
-                Generate(call, sw, stackAllocator, registerAllocator);
-            }
-
-            if (instruction is ILBinaryOp binaryOp)
-            {
-                Generate(binaryOp, sw, stackAllocator, registerAllocator);
-            }
-
-            if (instruction is ILWrite write)
-            {
-                Generate(write, sw, stackAllocator, registerAllocator);
+                case ILReturn ret:
+                    Generate(ret, sw, stackAllocator, registerAllocator);
+                    break;
+                case ILLoadPtr loadPtr:
+                    Generate(loadPtr, sw, stackAllocator, registerAllocator);
+                    break;
+                case ILLoad load:
+                    Generate(load, sw, stackAllocator, registerAllocator);
+                    break;
+                case ILUnaryOp unaryOp:
+                    Generate(unaryOp, sw, stackAllocator, registerAllocator);
+                    break;
+                case ILMove move:
+                    Generate(move, sw, stackAllocator, registerAllocator);
+                    break;
+                case ILIfGoto ifGoto:
+                    Generate(ifGoto, sw, stackAllocator, registerAllocator);
+                    break;
+                case ILLabel label:
+                    Generate(label, sw, stackAllocator, registerAllocator);
+                    break;
+                case ILGoto goTo:
+                    Generate(goTo, sw, stackAllocator, registerAllocator);
+                    break;
+                case ILCall call:
+                    Generate(call, sw, stackAllocator, registerAllocator);
+                    break;
+                case ILBinaryOp binaryOp:
+                    Generate(binaryOp, sw, stackAllocator, registerAllocator);
+                    break;
+                case ILWrite write:
+                    Generate(write, sw, stackAllocator, registerAllocator);
+                    break;
+                case ILRead read:
+                    Generate(read, sw, stackAllocator, registerAllocator);
+                    break;
             }
         }
         sw.WriteLine();
@@ -583,6 +566,31 @@ public class MipsGenerator
         sw.WriteLine($"\taddi $v0, $zero, {syscall}");
         // faz syscall
         sw.WriteLine($"\tsyscall # faz syscall {syscall} para escrever {write.WriteType}");
+    }
+
+    private void Generate(ILRead read, StreamWriter sw, StackAllocator stackAllocator,
+        RegisterAllocator registerAllocator)
+    {
+     // read int: 5
+     // read str: 8
+     // read bool: 46
+        int syscall = read.ReadType switch
+        {
+            Type.Integer => 5,
+            Type.String => 8,
+            Type.Boolean => 46,
+            Type.Void => -1,
+            _ => throw new NotSupportedException($"Unsupported read type: {read.ReadType}")
+        };
+        if (syscall == -1)
+        {
+            sw.WriteLine("\tnop");
+            return;
+        }
+        // coloca syscall em v0
+        sw.WriteLine($"\taddi $v0, $zero, {syscall} # syscall {syscall} para ler {read.ReadType}");
+        // faz syscall
+        
     }
     
     private class StackAllocator

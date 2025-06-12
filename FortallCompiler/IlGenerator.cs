@@ -68,7 +68,7 @@ public class IlGenerator
         
         foreach (StatementNode stmt in function.Body.Statements)
         {
-            Generate(stmt, instructions, $"__function_{function.Name}", ref idx);
+            Generate(stmt, instructions, $"__function_{function.Name}", ref idx, function.Body.ScopeData!);
         }
         
         if (instructions.Count == 0 || instructions.Last() is not ILReturn)
@@ -78,7 +78,7 @@ public class IlGenerator
         return ilFunction;
     }
 
-    private void Generate(StatementNode statement, List<ILInstruction> instructions, string namespaceName, ref int idx)
+    private void Generate(StatementNode statement, List<ILInstruction> instructions, string namespaceName, ref int idx, SemanticAnalyzer.ScopeData scopeData = null!)
     {
         switch (statement)
         {
@@ -158,7 +158,7 @@ public class IlGenerator
                 ReleaseTemp(writeTemp);
                 break;
             case ReadNode readStmt:
-                instructions.Add(new ILRead(new ILAddress(readStmt.VariableName)));
+                instructions.Add(new ILRead(new ILAddress(readStmt.VariableName), scopeData.GetVariable(readStmt.VariableName)!.Type));
                 break;
             case FunctionCallStatementNode funcCallStmt:
                 FunctionCallExpressionNode funcCall = funcCallStmt.FunctionCallExpression;
