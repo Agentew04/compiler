@@ -144,6 +144,11 @@ public class MipsGenerator
             {
                 Generate(call, sw, stackAllocator, registerAllocator);
             }
+
+            if (instruction is ILBinaryOp binaryOp)
+            {
+                Generate(binaryOp, sw, stackAllocator, registerAllocator);
+            }
         }
         sw.WriteLine();
     }
@@ -429,7 +434,115 @@ public class MipsGenerator
             sw.WriteLine($"\tsw $v0, {stackAllocator.GetVariableOffset(call.Dest.Name)}($sp) # armazena retorno da funcao em {call.Dest}");
         }
     }
-    
+
+    private void Generate(ILBinaryOp binaryOp, StreamWriter sw, StackAllocator stackAllocator,
+        RegisterAllocator registerAllocator)
+    {
+        bool leftUsesAt = true;
+        string leftReg = "$at";
+        string rightReg = "";
+
+        // carrega esquerda
+        if (binaryOp.Left.IsTemporary)
+        {
+            leftUsesAt = false;
+            leftReg = registerAllocator.GetRegister(binaryOp.Left);
+        }else if (binaryOp.Left.IsGlobal)
+        {
+            sw.WriteLine($"\tlw $at, {binaryOp.Left.Name} # carrega valor de {binaryOp.Left.Name} em $at");
+        }
+        else
+        {
+            // stack
+            sw.WriteLine($"\tlw $at, {stackAllocator.GetVariableOffset(binaryOp.Left.Name)}($sp) # carrega valor de {binaryOp.Left.Name} em $at");
+        }
+
+        bool rightAllocated = false;
+        if (binaryOp.Right.IsTemporary)
+        {
+            rightReg = registerAllocator.GetRegister(binaryOp.Right);
+        }else if (binaryOp.Right.IsGlobal)
+        {
+            rightReg = leftUsesAt ? registerAllocator.AllocateRegister(binaryOp.Right) : "$at";
+            rightAllocated = rightReg != "$at";
+            sw.WriteLine($"\tlw {rightReg}, {binaryOp.Right.Name} # carrega valor de {binaryOp.Right.Name} em {rightReg}");
+        }
+        else
+        {
+            // no stack
+            rightReg = leftUsesAt ? registerAllocator.AllocateRegister(binaryOp.Right) : "$at";
+            rightAllocated = rightReg != "$at";
+            sw.WriteLine($"\tlw {rightReg}, {stackAllocator.GetVariableOffset(binaryOp.Right.Name)}($sp) # carrega valor de {binaryOp.Right.Name} em {rightReg}");
+        }
+        
+        // ok, left e right estao carregados
+        switch (binaryOp.Op)
+        {
+            case BinaryOperationType.Addition:
+                sw.WriteLine($"\tadd $at, {leftReg}, {rightReg} # soma {binaryOp.Left} e {binaryOp.Right}");
+                break;
+            case BinaryOperationType.Subtraction:
+                sw.WriteLine($"\tsub $at, {leftReg}, {rightReg} # subtrai {binaryOp.Right} de {binaryOp.Left}");
+                break;
+            case BinaryOperationType.Multiplication:
+                // MUL coloca resultado no HI e LO e copia do LO para $at
+                sw.WriteLine($"\tmul $at, {leftReg}, {rightReg} # multiplica {binaryOp.Left} e {binaryOp.Right}");
+                break;
+            case BinaryOperationType.Division:
+                sw.WriteLine($"\tdiv $at, {leftReg}, {rightReg} # divide {binaryOp.Left} por {binaryOp.Right}");
+                break;
+            case BinaryOperationType.Equals:
+                sw.WriteLine($"\tseq $at, {leftReg}, {rightReg} # compara {binaryOp.Left} == {binaryOp.Right}");
+                break;
+            case BinaryOperationType.NotEquals:
+                sw.WriteLine($"\tsne $at, {leftReg}, {rightReg} # compara {binaryOp.Left} != {binaryOp.Right}");
+                break;
+            case BinaryOperationType.LessThan:
+                sw.WriteLine($"\tslt $at, {leftReg}, {rightReg} # compara {binaryOp.Left} < {binaryOp.Right}");
+                break;
+            case BinaryOperationType.LessEqualThan:
+                sw.WriteLine($"\tsle $at, {leftReg}, {rightReg} # compara {binaryOp.Left} <= {binaryOp.Right}");
+                break;
+            case BinaryOperationType.GreaterThan:
+                sw.WriteLine($"\tsgt $at, {leftReg}, {rightReg} # compara {binaryOp.Left} > {binaryOp.Right}");
+                break;
+            case BinaryOperationType.GreaterEqualThan:
+                sw.WriteLine($"\tsge $at, {leftReg}, {rightReg} # compara {binaryOp.Left} >= {binaryOp.Right}");
+                break;
+            case BinaryOperationType.And:
+                sw.WriteLine($"\tand $at, {leftReg}, {rightReg} # realiza AND bit a bit entre {binaryOp.Left} e {binaryOp.Right}");
+                break;
+            case BinaryOperationType.Or:
+                sw.WriteLine($"\tor $at, {leftReg}, {rightReg} # realiza OR bit a bit entre {binaryOp.Left} e {binaryOp.Right}");
+                break;
+            default:
+                throw new NotSupportedException($"Unsupported binary operation: {binaryOp.Op}");
+                break;
+        }
+        
+        // resultado esta no $at
+
+        if (binaryOp.Dest.IsTemporary)
+        {
+            sw.WriteLine($"\tadd {registerAllocator.GetRegister(binaryOp.Dest)}, $at, $zero # armazena resultado de {binaryOp.Left} e {binaryOp.Right} em {binaryOp.Dest}");
+        }
+        else if (binaryOp.Dest.IsGlobal)
+        {
+            sw.WriteLine($"\tsw $at, {binaryOp.Dest.Name} # armazena resultado de {binaryOp.Left} e {binaryOp.Right} em {binaryOp.Dest.Name}");
+        }
+        else
+        {
+            // stack
+            sw.WriteLine($"\tsw $at, {stackAllocator.GetVariableOffset(binaryOp.Dest.Name)}($sp) # armazena resultado de {binaryOp.Left} e {binaryOp.Right} em {binaryOp.Dest}");   
+        }
+
+        if (rightAllocated)
+        {
+            // se alocou um registrador para o right, libera ele
+            registerAllocator.DisposeRegister(rightReg);
+        }
+    }
+
     private class StackAllocator
     {
         private List<string> variables = [];
