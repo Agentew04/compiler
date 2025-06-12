@@ -4,10 +4,10 @@ namespace FortallCompiler.CodeGeneration.IL;
 
 public class ILUnaryOp : ILInstruction
 {
-    public string Dest, Operand;
+    public ILAddress Dest, Operand;
     public UnaryOperationType Op;
 
-    public ILUnaryOp(string dest, UnaryOperationType op, string operand)
+    public ILUnaryOp(ILAddress dest, UnaryOperationType op, ILAddress operand)
     {
         Dest = dest;
         Op = op;

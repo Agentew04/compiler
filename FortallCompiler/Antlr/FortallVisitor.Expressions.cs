@@ -185,8 +185,9 @@ public partial class FortallVisitor {
             if (ctx.constant().NUMBER() != null) {
                 value = int.Parse(text);
                 type = Type.Integer;
-            }else if (ctx.constant().STRING() != null) {
-                value = text.Trim('"'); // remove aspas
+            }else if (ctx.constant().STRING() != null)
+            {
+                value = text.Substring(1, text.Length - 2);
                 type = Type.String;
             }else if (ctx.constant().BOOL() != null) {
                 value = text == "true";

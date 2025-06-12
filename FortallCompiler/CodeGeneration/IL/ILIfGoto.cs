@@ -3,10 +3,10 @@
 
 public class ILIfGoto : ILInstruction
 {
-    public string Condition;
+    public ILAddress Condition;
     public string Label;
 
-    public ILIfGoto(string condition, string label)
+    public ILIfGoto(ILAddress condition, string label)
     {
         Condition = condition;
         Label = label;

@@ -2,10 +2,10 @@
 
 public class ILLoad : ILInstruction
 {
-    public string Dest;
+    public ILAddress Dest;
     public object Value;
 
-    public ILLoad(string dest, object value)
+    public ILLoad(ILAddress dest, object value)
     {
         Dest = dest;
         Value = value;

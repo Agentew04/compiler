@@ -2,9 +2,9 @@
 
 public class ILReturn : ILInstruction
 {
-    public string? Value;
+    public ILAddress? Value;
 
-    public ILReturn(string? value = null)
+    public ILReturn(ILAddress? value = null)
     {
         Value = value;
     }

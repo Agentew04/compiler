@@ -2,9 +2,9 @@
 
 public class ILRead : ILInstruction
 {
-    public string Dest;
+    public ILAddress Dest;
 
-    public ILRead(string dest)
+    public ILRead(ILAddress dest)
     {
         Dest = dest;
     }

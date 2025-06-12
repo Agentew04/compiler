@@ -4,10 +4,10 @@ namespace FortallCompiler.CodeGeneration.IL;
 
 public class ILWrite : ILInstruction
 {
-    public string Src;
+    public ILAddress Src;
     public Type WriteType;
     
-    public ILWrite(string src, Type writeType)
+    public ILWrite(ILAddress src, Type writeType)
     {
         Src = src;
         WriteType = writeType;

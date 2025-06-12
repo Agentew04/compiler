@@ -4,10 +4,10 @@ namespace FortallCompiler.CodeGeneration.IL;
 
 public class ILBinaryOp : ILInstruction
 {
-    public string Dest, Left, Right;
+    public ILAddress Dest, Left, Right;
     public BinaryOperationType Op;
 
-    public ILBinaryOp(string dest, string left, BinaryOperationType op, string right)
+    public ILBinaryOp(ILAddress dest, ILAddress left, BinaryOperationType op, ILAddress right)
     {
         Dest = dest;
         Left = left;

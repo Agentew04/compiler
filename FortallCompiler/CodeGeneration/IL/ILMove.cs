@@ -2,9 +2,9 @@
 
 public class ILMove : ILInstruction
 {
-    public string Dest, Src;
+    public ILAddress Dest, Src;
 
-    public ILMove(string dest, string src)
+    public ILMove(ILAddress dest, ILAddress src)
     {
         Dest = dest;
         Src = src;

@@ -17,10 +17,12 @@ Funcao main Recebe Nada e Retorna Nada
     int d := soma(a,b);
     str resultStr := "A soma esta ";
     Se c == d Entao
+        int dada;
         Escrever resultStr;
         Escrever "correta: ";
         Escrever c;
     Senao
+        str carlos;
         Escrever resultStr;
         Escrever "incorreta: ";
         Escrever c;

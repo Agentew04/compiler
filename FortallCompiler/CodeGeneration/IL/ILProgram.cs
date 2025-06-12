@@ -20,7 +20,7 @@ public class ILProgram
         sb.AppendLine();
         foreach (ILFunction function in Functions)
         {
-            sb.AppendLine($"# {function.Name}({string.Join(", ", function.Paramters)})");
+            sb.AppendLine($"# {function.Name}({string.Join(", ", function.Parameters)})");
             foreach (ILInstruction instruction in function.Instructions)
             {
                 sb.AppendLine("  " + instruction.ToString());

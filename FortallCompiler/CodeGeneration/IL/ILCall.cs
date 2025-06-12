@@ -2,11 +2,11 @@
 
 public class ILCall : ILInstruction
 {
-    public string? Dest; // pode ser null p funcoes void
+    public ILAddress? Dest; // pode ser null p funcoes void
     public string FunctionName;
-    public List<string> Arguments;
+    public List<ILAddress> Arguments;
 
-    public ILCall(string dest, string functionName, List<string> arguments)
+    public ILCall(ILAddress dest, string functionName, List<ILAddress> arguments)
     {
         Dest = dest;
         FunctionName = functionName;

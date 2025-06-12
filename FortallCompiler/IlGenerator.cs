@@ -7,7 +7,7 @@ namespace FortallCompiler;
 
 public class IlGenerator
 {
-    private readonly Stack<string> freeTemps = new();
+    private readonly Stack<ILAddress> freeTemps = new();
     private int tempCounter;
     private string mainLabel;
     
@@ -60,6 +60,8 @@ public class IlGenerator
         {
             mainLabel = label;
         }
+
+        ilFunction.Label = label;
         instructions.Add(new ILLabel(label));
 
         int idx = 0;
@@ -68,7 +70,7 @@ public class IlGenerator
         {
             Generate(stmt, instructions, $"__function_{function.Name}", ref idx);
         }
-
+        
         if (instructions.Count == 0 || instructions.Last() is not ILReturn)
         {
             instructions.Add(new ILReturn());
@@ -86,15 +88,15 @@ public class IlGenerator
                     instructions.Add(new ILReturn());
                     return;
                 }
-                string returnValue = Generate(returnStmt.Expression, instructions);
+                ILAddress returnValue = Generate(returnStmt.Expression, instructions);
                 instructions.Add(new ILReturn(returnValue));
                 ReleaseTemp(returnValue);
                 break;
             case IfStatementNode ifStmt:
-                string ifCondTemp = Generate(ifStmt.Condition, instructions);
+                ILAddress ifCondTemp = Generate(ifStmt.Condition, instructions);
                 string elseLabel = $"{namespaceName}_else_{idx++}";
                 string endIfLabel = $"{namespaceName}_endif_{idx++}";
-                string notCondTemp = GetTemp();
+                ILAddress notCondTemp = GetTemp();
                 instructions.Add(new ILUnaryOp(notCondTemp, UnaryOperationType.Not, ifCondTemp));
                 ReleaseTemp(ifCondTemp);
                 instructions.Add(new ILIfGoto(notCondTemp, elseLabel));
@@ -123,8 +125,8 @@ public class IlGenerator
                 
                 instructions.Add(new ILLabel(startLabel));
                 
-                string whileCondTemp = Generate(whileStmt.Condition, instructions);
-                string whileNotCondTemp = GetTemp();
+                ILAddress whileCondTemp = Generate(whileStmt.Condition, instructions);
+                ILAddress whileNotCondTemp = GetTemp();
                 instructions.Add(new ILUnaryOp(whileNotCondTemp, UnaryOperationType.Not, whileCondTemp));
                 ReleaseTemp(whileCondTemp);
                 instructions.Add(new ILIfGoto(whileNotCondTemp, endLabel));
@@ -139,25 +141,32 @@ public class IlGenerator
                 instructions.Add(new ILLabel(endLabel));
                 break;
             case AssignmentNode assignStmt:
-                string valueTemp = Generate(assignStmt.AssignedValue, instructions);
-                instructions.Add(new ILMove(assignStmt.VariableName, valueTemp));
+                ILAddress valueTemp = Generate(assignStmt.AssignedValue, instructions);
+                if (assignStmt.AssignedValue.ExpressionType == Type.String)
+                {
+                    instructions.Add(new ILLoadPtr(new ILAddress(assignStmt.VariableName), valueTemp));
+                }
+                else
+                {
+                    instructions.Add(new ILMove(new ILAddress(assignStmt.VariableName), valueTemp));
+                }
                 ReleaseTemp(valueTemp);
                 break;
             case WriteNode writeStmt:
-                string writeTemp = Generate(writeStmt.Expression, instructions);
+                ILAddress writeTemp = Generate(writeStmt.Expression, instructions);
                 instructions.Add(new ILWrite(writeTemp, writeStmt.Expression.ExpressionType));
                 ReleaseTemp(writeTemp);
                 break;
             case ReadNode readStmt:
-                instructions.Add(new ILRead(readStmt.VariableName));
+                instructions.Add(new ILRead(new ILAddress(readStmt.VariableName)));
                 break;
             case FunctionCallStatementNode funcCallStmt:
                 FunctionCallExpressionNode funcCall = funcCallStmt.FunctionCallExpression;
-                List<string> args = [];
+                List<ILAddress> args = [];
                 args.AddRange(funcCall.Arguments.Select(arg => Generate(arg, instructions)));
-                string tCall = GetTemp();
+                ILAddress tCall = GetTemp();
                 instructions.Add(new ILCall(tCall, funcCall.FunctionName, args));
-                foreach (string arg in args)
+                foreach (ILAddress arg in args)
                 {
                     ReleaseTemp(arg);
                 }
@@ -170,46 +179,53 @@ public class IlGenerator
                 {
                     break;
                 }
-                string initValueTemp = Generate(varDecl.InitValue, instructions);
-                instructions.Add(new ILMove(varDecl.VariableName, initValueTemp));
+                ILAddress initValueTemp = Generate(varDecl.InitValue, instructions);
+                if (varDecl.InitValue.ExpressionType == Type.String)
+                {
+                    instructions.Add(new ILLoadPtr(new ILAddress(varDecl.VariableName), initValueTemp));
+                }
+                else
+                {
+                    instructions.Add(new ILMove(new ILAddress(varDecl.VariableName), initValueTemp));
+                }
                 ReleaseTemp(initValueTemp);
                 break;
         }
     }
 
-    private string Generate(ExpressionNode expression, List<ILInstruction> instructions)
+    private ILAddress Generate(ExpressionNode expression, List<ILInstruction> instructions)
     {
         switch (expression) {
             case LiteralExpressionNode lit:
                 if (lit.Type == Type.String)
                 {
-                    return lit.StringIdentifier!;
+                    return new ILAddress(lit.StringIdentifier!);
                 }
-                string tLit = GetTemp();
+                ILAddress tLit = GetTemp();
                 instructions.Add(new ILLoad(tLit, lit.Value));
                 return tLit;
             case IdentifierExpressionNode identifier:
-                return identifier.Name;
+                return new ILAddress(identifier.Name);
             case UnaryExpressionNode un:
-                string tUnary = GetTemp();
-                string operand = Generate(un.Operand, instructions);
+                ILAddress tUnary = GetTemp();
+                ILAddress operand = Generate(un.Operand, instructions);
                 instructions.Add(new ILUnaryOp(tUnary, un.Operation, operand));
                 ReleaseTemp(operand);
                 return tUnary;
             case BinaryExpressionNode bin:
-                string tBinary = GetTemp();
-                string left = Generate(bin.Left, instructions);
-                string right = Generate(bin.Right, instructions);
+                ILAddress tBinary = GetTemp();
+                ILAddress left = Generate(bin.Left, instructions);
+                ILAddress right = Generate(bin.Right, instructions);
                 instructions.Add(new ILBinaryOp(tBinary, left, bin.Operation, right));
                 ReleaseTemp(left);
                 ReleaseTemp(right);
                 return tBinary;
             case FunctionCallExpressionNode call:
-                List<string> args = [];
+                List<ILAddress> args = [];
                 args.AddRange(call.Arguments.Select(arg => Generate(arg, instructions)));
-                string tCall = GetTemp();
+                ILAddress tCall = GetTemp();
                 instructions.Add(new ILCall(tCall, call.FunctionName, args));
-                foreach (string arg in args)
+                foreach (ILAddress arg in args)
                 {
                     ReleaseTemp(arg);
                 }
@@ -219,20 +235,23 @@ public class IlGenerator
         }
     }
 
-    private string GetTemp()
+    private ILAddress GetTemp()
     {
-        return freeTemps.Count > 0 ? freeTemps.Pop() : $"t{tempCounter++}";
+        if (freeTemps.Count > 0)
+        {
+            return freeTemps.Pop();
+        }
+        else
+        {
+            return new ILAddress($"t{tempCounter++}", true);
+        }
     }
     
-    private void ReleaseTemp(string temp)
+    private void ReleaseTemp(ILAddress temp)
     {
-        if (IsTemp(temp))
+        if (temp.IsTemporary)
         {
             freeTemps.Push(temp);
         }
     }
-
-    private bool IsTemp(string name) => name.StartsWith('t');
-
-    
 }
