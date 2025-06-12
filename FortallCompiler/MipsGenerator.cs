@@ -149,6 +149,11 @@ public class MipsGenerator
             {
                 Generate(binaryOp, sw, stackAllocator, registerAllocator);
             }
+
+            if (instruction is ILWrite write)
+            {
+                Generate(write, sw, stackAllocator, registerAllocator);
+            }
         }
         sw.WriteLine();
     }
@@ -543,6 +548,43 @@ public class MipsGenerator
         }
     }
 
+    private void Generate(ILWrite write, StreamWriter sw, StackAllocator stackAllocator,
+        RegisterAllocator registerAllocator)
+    {
+        int syscall = write.WriteType switch
+        {
+            Type.Integer => 1,
+            Type.String => 4,
+            Type.Boolean => 45, // implementado como syscall 45 extra. nao existente no mars
+            Type.Void => -1,
+            _ => throw new NotSupportedException($"Unsupported write type: {write.WriteType}")
+        };
+        if (syscall == -1)
+        {
+            sw.WriteLine("\tnop");
+            return;
+        }
+
+        // move argumento para $a0
+        if (write.Src.IsTemporary)
+        {
+            sw.WriteLine($"\tadd $a0, {registerAllocator.GetRegister(write.Src)}, $zero # move valor de {write.Src} para $a0 para syscall");
+        }
+        else if (write.Src.IsGlobal)
+        {
+            sw.WriteLine($"\tlw $a0, {write.Src.Name} # carrega valor de {write.Src.Name} em $a0");
+        }
+        else
+        {
+            // stack
+            sw.WriteLine($"\tlw $a0, {stackAllocator.GetVariableOffset(write.Src.Name)}($sp) # carrega valor de {write.Src.Name} em $a0");
+        }
+        // coloca valor da syscall em v0
+        sw.WriteLine($"\taddi $v0, $zero, {syscall}");
+        // faz syscall
+        sw.WriteLine($"\tsyscall # faz syscall {syscall} para escrever {write.WriteType}");
+    }
+    
     private class StackAllocator
     {
         private List<string> variables = [];
