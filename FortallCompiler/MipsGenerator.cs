@@ -119,11 +119,17 @@ public class MipsGenerator
             {
                 Generate(unaryOp, sw, stackAllocator, registerAllocator);
             }
+
+            if (instruction is ILMove move)
+            {
+                Generate(move, sw, stackAllocator, registerAllocator);
+            }
         }
         sw.WriteLine();
     }
 
-    private void Generate(ILReturn ret, StreamWriter sw, StackAllocator stackAllocator, RegisterAllocator registerAllocator)
+    private void Generate(ILReturn ret, StreamWriter sw, StackAllocator stackAllocator, 
+        RegisterAllocator registerAllocator)
     {
         // restore $ra
         sw.WriteLine("\tlw ra, 0($fp) # restaura endereco de retorno");
@@ -148,7 +154,8 @@ public class MipsGenerator
         sw.WriteLine("\tjr $ra # retorna");
     }
     
-    private void Generate(ILLoadPtr loadptr, StreamWriter sw, StackAllocator stackAllocator, RegisterAllocator registerAllocator)
+    private void Generate(ILLoadPtr loadptr, StreamWriter sw, StackAllocator stackAllocator, 
+        RegisterAllocator registerAllocator)
     {
         if (!loadptr.Src.IsGlobal)
         {
@@ -183,7 +190,8 @@ public class MipsGenerator
         }
     }
 
-    private void Generate(ILLoad load, StreamWriter sw, StackAllocator stackAllocator, RegisterAllocator registerAllocator)
+    private void Generate(ILLoad load, StreamWriter sw, StackAllocator stackAllocator, 
+        RegisterAllocator registerAllocator)
     {
         // aqui sabemos que nao eh string.
         int value;
@@ -254,6 +262,46 @@ public class MipsGenerator
         {
             // stack
             sw.WriteLine($"\tsw $at, {stackAllocator.GetVariableOffset(unaryOp.Dest.Name)}($sp) # armazena resultado de {unaryOp.Operand} em {unaryOp.Dest}");
+        }
+    }
+
+    private void Generate(ILMove move, StreamWriter sw, StackAllocator stackAllocator,
+        RegisterAllocator registerAllocator)
+    {
+        if (move.Src.IsTemporary && move.Dest.IsTemporary)
+        {
+            sw.WriteLine($"\tadd {registerAllocator.GetRegister(move.Dest)}, {registerAllocator.GetRegister(move.Src)}, $zero # move {move.Src} para {move.Dest}");
+            return;
+        }
+
+        string dest = "$at";
+        if (move.Src.IsTemporary)
+        {
+            dest = registerAllocator.GetRegister(move.Dest);
+        }
+        else if (move.Src.IsGlobal)
+        {
+            sw.WriteLine($"\tlw $at, {move.Src.Name} # carrega valor de {move.Src.Name} em $at");
+        }
+        else
+        {
+            // stack
+            sw.WriteLine($"\tlw $at, {stackAllocator.GetVariableOffset(move.Src.Name)}($sp) # carrega valor de {move.Src.Name} em $at");
+        }
+        
+        // valor esta em dest
+        if (move.Dest.IsTemporary)
+        {
+            sw.WriteLine($"\tadd {registerAllocator.GetRegister(move.Dest)}, {dest}, $zero # move valor de {move.Src} para {move.Dest}");
+        }
+        else if (move.Dest.IsGlobal)
+        {
+            sw.WriteLine($"\tsw {dest}, {move.Dest.Name} # move valor de {move.Src} para {move.Dest.Name}");
+        }
+        else
+        {
+            // stack
+            sw.WriteLine($"\tsw {dest}, {stackAllocator.GetVariableOffset(move.Dest.Name)}($sp) # move valor de {move.Src} para {move.Dest}");
         }
     }
     
