@@ -72,7 +72,9 @@ public class MipsGenerator
         sw.WriteLine($"{ilLabel.Name}:");
         
         StackAllocator stackAllocator = new();
-        stackAllocator.AllocateVariable("$ra");
+        if (function.Name != "main") {
+            stackAllocator.AllocateVariable("$ra");
+        }
         sw.WriteLine("\t# Mapa de offsets de variaveis:");
         // aloca todos os parametros
         foreach (string param in function.Parameters)
@@ -107,7 +109,9 @@ public class MipsGenerator
         // emit prologue
         sw.WriteLine("\t# PROLOGO");
         sw.WriteLine($"\taddi $sp, $sp, -{stackAllocator.GetStackSize()} # aloca espaco na pilha");
-        sw.WriteLine($"\tsw $ra, {stackAllocator.GetVariableOffset("$ra")}($sp) # salva endereco de retorno");
+        if (function.Name != "main") {
+            sw.WriteLine($"\tsw $ra, {stackAllocator.GetVariableOffset("$ra")}($sp) # salva endereco de retorno");
+        }
 
         // salva parametros no stack
         for (i = 0; i < function.Parameters.Count; i++) {
@@ -164,7 +168,10 @@ public class MipsGenerator
         RegisterAllocator registerAllocator)
     {
         // restore $ra
-        sw.WriteLine($"\tlw $ra, {stackAllocator.GetVariableOffset("$ra")}($sp) # restaura endereco de retorno");
+        bool isMain = stackAllocator.GetVariableOffset("$ra") == -1; 
+        if (!isMain) {
+            sw.WriteLine($"\tlw $ra, {stackAllocator.GetVariableOffset("$ra")}($sp) # restaura endereco de retorno");
+        }
         if (ret.Value is not null)
         {
             if (ret.Value.AddressType == ILAddressType.Temporary)
@@ -182,10 +189,25 @@ public class MipsGenerator
                 sw.WriteLine($"\tlw $v0, +{offset}($sp) # carrega valor de retorno");
             }
         }
+        else {
+            sw.WriteLine("\taddi $v0, $zero, $zero # funcao nao tem retorno, seta como 0");
+        }
         // libera a memoria do stack
         sw.WriteLine($"\taddi $sp, $sp, {stackAllocator.GetStackSize()} # libera espaco na pilha");
         // retorna
-        sw.WriteLine("\tjr $ra # retorna");
+        if (isMain) {
+            // termina a execucao
+            int syscall = ret.Value is not null ? 17 : 10;
+            if (syscall == 17) {
+                sw.WriteLine("\tadd $a0, $v0, $zero # passa codigo de saida do programa");
+            }
+            sw.WriteLine($"\tli $v0, {syscall}");
+            sw.WriteLine("\tsyscall # termina a execucao");
+        }
+        else {
+            // volta pra funcao anterior
+            sw.WriteLine("\tjr $ra # retorna");
+        }
     }
     
     private void Generate(ILLoadPtr loadptr, StreamWriter sw, StackAllocator stackAllocator, 
@@ -653,6 +675,9 @@ public class MipsGenerator
         public int GetVariableOffset(string name)
         {
             int index = variables.IndexOf(name);
+            if (index == -1) {
+                return -1;
+            }
             int offset = (variables.Count - (index + 1)) * 4;
             return offset;
         }

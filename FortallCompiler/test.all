@@ -1,8 +1,9 @@
 ﻿int result;
-Funcao main Recebe Nada e Retorna Nada
+Funcao main Recebe Nada e Retorna int
     int a := 5;
     int b := 10;
     int c := soma(a,b);
+    Retorna 1;
 Fim Funcao
 
 Funcao soma Recebe int x, int y e Retorna int
