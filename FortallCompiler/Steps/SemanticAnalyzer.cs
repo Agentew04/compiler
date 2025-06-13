@@ -1,7 +1,7 @@
 ﻿using FortallCompiler.Ast;
 using Type = FortallCompiler.Ast.Type;
 
-namespace FortallCompiler;
+namespace FortallCompiler.Steps;
 
 public class SemanticAnalyzer {
 

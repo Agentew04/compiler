@@ -1,15 +1,16 @@
-﻿int result;
-str globalstr := "oi gente!\n";
-
-Funcao main Recebe Nada e Retorna int
+﻿Funcao main Recebe Nada e Retorna Nada
     int a := 5;
     int b := 10;
-    int c := soma(a,b);
-    Retorna 1;
+    int c := a+b;
 Fim Funcao
 
-Funcao soma Recebe int x, int y e Retorna int
-    result := x + y;
-    result := result + 1;
-    Retorna Nada;
+Funcao fibonacci Recebe int n e Retorna int
+    Se n == 1 || n == 2 Entao
+        Retorna 1;
+    Fim Se
+    int nMenos1 := n - 1;
+    int nMenos2 := n - 2;
+    int a := fibonacci(nMenos1);
+    int b := fibonacci(nMenos2);
+    Retorna a+b;
 Fim Funcao

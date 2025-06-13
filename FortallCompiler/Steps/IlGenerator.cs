@@ -1,9 +1,8 @@
-﻿using System.Text;
-using FortallCompiler.Ast;
+﻿using FortallCompiler.Ast;
 using FortallCompiler.IL;
 using Type = FortallCompiler.Ast.Type;
 
-namespace FortallCompiler;
+namespace FortallCompiler.Steps;
 
 public class IlGenerator {
     private ProgramNode program;

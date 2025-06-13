@@ -2,10 +2,11 @@
 using System.Reflection;
 using FortallCompiler.Ast;
 using FortallCompiler.IL;
+using FortallCompiler.Steps;
 
 namespace FortallCompiler;
 
-class Program
+public static class Program
 {
     private static void Main(string[] args)
     {
@@ -35,11 +36,13 @@ class Program
 
         if (!SyntaticAnalysis(s, sw, ref totalTime, out ProgramNode? ast))
         {
+            Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
             return;
         }
 
         if (!SemanticAnalysis(ast!, sw, ref totalTime))
         {
+            Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
             return;
         }
         
@@ -50,13 +53,23 @@ class Program
         
         string asmPath = Path.ChangeExtension(path, ".s");
         FileStream asmFs = File.Open(asmPath, FileMode.OpenOrCreate, FileAccess.Write);
-        AssemblyGeneration(ilProgram, sw, ref totalTime, asmFs);
+        if (!AssemblyGeneration(ilProgram, sw, ref totalTime, asmFs)) {
+            return;            
+        }
         asmFs.Dispose();
-        
-        Assemble(asmPath, sw, ref totalTime);
+
+        if (!Assemble(asmPath, sw, ref totalTime, out string outputPath)) {
+            Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
+            return;            
+        }
 
         Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
-        Console.WriteLine("Executar? (S/n)");
+        sw.Stop();
+        Console.WriteLine("Executar? (S/N)");
+        string input = Console.ReadLine() ?? "S";
+        if (input is "S" or "s") {
+            Run(outputPath);
+        }
     }
 
 
@@ -139,13 +152,20 @@ class Program
         Console.WriteLine();
     }
     
-    private static void AssemblyGeneration(ILProgram ilProgram, Stopwatch sw, ref double totalTime, Stream outputStream)
+    private static bool AssemblyGeneration(ILProgram ilProgram, Stopwatch sw, ref double totalTime, Stream outputStream)
     {
         using MemoryStream ms = new();
         Console.WriteLine("Traduzindo codigo intermediario assembly MIPS...");
         MipsGenerator mipsGenerator = new();
         sw.Restart();
-        mipsGenerator.Generate(ilProgram, ms);
+        try {
+            mipsGenerator.Generate(ilProgram, ms);
+        }
+        catch (Exception) {
+            // erro, printa o resto
+            return false;
+        }
+
         sw.Stop();
         totalTime += sw.Elapsed.TotalMilliseconds;
         Console.WriteLine($"Traducao para assembly bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
@@ -160,14 +180,15 @@ class Program
         totalTime += sw.Elapsed.TotalMilliseconds;
         Console.WriteLine($"Escrito assembly no disco em {sw.Elapsed.TotalMilliseconds}ms!");
         Console.WriteLine();
+        return true;
     }
 
-    private static bool Assemble(string path, Stopwatch sw, ref double totalTime)
+    private static bool Assemble(string path, Stopwatch sw, ref double totalTime, out string outputPath)
     {
         Console.WriteLine("Comecando a montagem com ferramenta externa...");
         Assembler assembler = new();
         sw.Restart();
-        bool success = assembler.Compile(path);
+        bool success = assembler.Compile(path, out outputPath);
         sw.Stop();
         totalTime += sw.Elapsed.TotalMilliseconds;
         if (success) {
@@ -178,5 +199,10 @@ class Program
 
         Console.WriteLine("Ocorreu um erro na montagem :(");
         return false;
+    }
+
+    private static void Run(string path) {
+        Runner runner = new();
+        runner.Run(path);
     }
 }

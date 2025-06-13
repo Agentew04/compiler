@@ -1,4 +1,4 @@
-﻿namespace FortallCompiler;
+﻿namespace FortallCompiler.Steps;
 
 public class Diagnostic {
     public Diagnostic(string message, int line, int column) {

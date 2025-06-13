@@ -1,11 +1,11 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
 
-namespace FortallCompiler;
+namespace FortallCompiler.Steps;
 
 public class Assembler {
     
-    public bool Compile(string path) {
+    public bool Compile(string path, out string outputPath) {
         string tempPath = Path.GetTempPath();
         string linkerPath = Path.Combine(tempPath, "linker.ld");
         FileStream fs = File.Open(linkerPath, FileMode.OpenOrCreate);
@@ -15,7 +15,7 @@ public class Assembler {
         fs.SetLength(fs.Position);
         fs.Dispose();
         
-        string outputPath = Path.ChangeExtension(path, ".exe");
+        outputPath = Path.ChangeExtension(path, ".exe");
         string args =
             $"--target=mips-linux-gnu -O0 -fno-pic -mno-abicalls -nostartfiles -T \"{linkerPath}\" -nostdlib -fuse-ld=lld -static \"{path}\"  -o \"{outputPath}\"";
 

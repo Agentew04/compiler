@@ -1,4 +1,6 @@
-﻿namespace FortallCompiler.Ast;
+﻿using FortallCompiler.Steps;
+
+namespace FortallCompiler.Ast;
 
 public class BlockNode : AstNode
 {

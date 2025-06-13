@@ -3,7 +3,7 @@ using FortallCompiler.Ast;
 using FortallCompiler.IL;
 using Type = FortallCompiler.Ast.Type;
 
-namespace FortallCompiler;
+namespace FortallCompiler.Steps;
 
 public class MipsGenerator
 {
@@ -14,6 +14,7 @@ public class MipsGenerator
         this.program = program;
         using StreamWriter sw = new(outputStream, leaveOpen: true);
         // write globals
+        sw.WriteLine(".globl __start");
         sw.WriteLine(".data");
         foreach (ILGlobalVariable global in program.Globals)
         {

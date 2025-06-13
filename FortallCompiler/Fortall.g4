@@ -28,8 +28,8 @@ andExpr: equalityExpr ('&&' equalityExpr)*;
 equalityExpr: relationalExpr (('==' | '!=') relationalExpr)*;
 relationalExpr: addExpr (('<' | '<=' | '>' | '>=') addExpr)*;
 addExpr: mulExpr (('+' | '-') mulExpr)*;
-mulExpr: unaryExpr (('*' | '/') unaryExpr)*;
-unaryExpr: '!' unaryExpr | primary;
+mulExpr: unaryExpr (('*' | '/' ) unaryExpr)*;
+unaryExpr: ('!') unaryExpr | primary;
 primary: ID | constant | functionCall | '(' expression ')';
 
 /*

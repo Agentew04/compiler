@@ -2,7 +2,7 @@
 using FortallCompiler.Antlr;
 using FortallCompiler.Ast;
 
-namespace FortallCompiler;
+namespace FortallCompiler.Steps;
 
 public class SyntaticAnalyzer {
 

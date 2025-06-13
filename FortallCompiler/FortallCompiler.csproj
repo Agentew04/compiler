@@ -31,4 +31,8 @@
       <EmbeddedResource Include="linker.ld" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\SimuladorSAAE\SAAE.Engine\SAAE.Engine.csproj" />
+    </ItemGroup>
+
 </Project>
