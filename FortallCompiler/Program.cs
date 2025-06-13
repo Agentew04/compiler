@@ -164,8 +164,9 @@ class Program
     private static void Compilation(string path, Stopwatch sw, ref double totalTime)
     {
         Console.WriteLine("Comecando a compilacao com ferramenta externa...");
+        Compiler compiler = new();
         sw.Restart();
-        // TODO: chamar clang e compilar
+        compiler.Compile(path);
         sw.Stop();
         totalTime += sw.Elapsed.TotalMilliseconds;
         Console.WriteLine($"Compilacao bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
