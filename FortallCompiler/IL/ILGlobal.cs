@@ -1,7 +1,6 @@
-﻿using FortallCompiler.Ast;
-using Type = FortallCompiler.Ast.Type;
+﻿using Type = FortallCompiler.Ast.Type;
 
-namespace FortallCompiler.CodeGeneration.IL;
+namespace FortallCompiler.IL;
 
 public class ILGlobalVariable
 {

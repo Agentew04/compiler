@@ -1,14 +1,13 @@
 ﻿using System.Text;
-using Type = FortallCompiler.Ast.Type;
 
-namespace FortallCompiler.CodeGeneration.IL;
+namespace FortallCompiler.IL;
 
 public class ILProgram
 {
     public List<ILFunction> Functions { get; set; } = [];
     public List<ILGlobalVariable> Globals { get; set; } = [];
-    
-    public string MainLabel { get; set; }
+
+    public string MainLabel { get; set; } = null!;
 
     public override string ToString()
     {

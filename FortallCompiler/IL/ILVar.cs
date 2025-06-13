@@ -1,6 +1,6 @@
 ﻿using Type = FortallCompiler.Ast.Type;
 
-namespace FortallCompiler.CodeGeneration.IL;
+namespace FortallCompiler.IL;
 
 public class ILVar : ILInstruction
 {

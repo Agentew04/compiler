@@ -1,35 +1,11 @@
-﻿int intglob;
-int var2 := 5;
-str strsemval;
-str strcomval := "teste";
-bool boolvar := true;
-bool boolsemval;
-
+﻿int result;
 Funcao main Recebe Nada e Retorna Nada
-    str prompt := "Digite um numero: ";
-    Escrever prompt;
-    int a;
-    Ler a;
-    Escrever prompt;
-    int b;
-    Ler b;
-    int c := a + b;
-    int d := soma(a,b);
-    str resultStr := "A soma esta ";
-    Se c == d Entao
-        int dada;
-        Escrever resultStr;
-        Escrever "correta: ";
-        Escrever c;
-    Senao
-        str carlos;
-        Escrever resultStr;
-        Escrever "incorreta: ";
-        Escrever c;
-    Fim Se
+    int a := 5;
+    int b := 10;
+    int c := soma(a,b);
 Fim Funcao
 
 Funcao soma Recebe int x, int y e Retorna int
-    int resultado := x + y;
-    Retorna resultado;
+    result := x + y;
+    Retorna Nada;
 Fim Funcao

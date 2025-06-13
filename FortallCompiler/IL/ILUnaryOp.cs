@@ -1,6 +1,6 @@
 ﻿using FortallCompiler.Ast;
 
-namespace FortallCompiler.CodeGeneration.IL;
+namespace FortallCompiler.IL;
 
 public class ILUnaryOp : ILInstruction
 {

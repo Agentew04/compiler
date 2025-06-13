@@ -1,4 +1,4 @@
-﻿namespace FortallCompiler.CodeGeneration.IL;
+﻿namespace FortallCompiler.IL;
 
 public class ILLoadPtr : ILInstruction
 {

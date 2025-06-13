@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
 using FortallCompiler.Ast;
-using FortallCompiler.CodeGeneration.IL;
+using FortallCompiler.IL;
 
 namespace FortallCompiler;
 

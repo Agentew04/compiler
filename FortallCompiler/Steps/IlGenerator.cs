@@ -1,18 +1,18 @@
 ﻿using System.Text;
 using FortallCompiler.Ast;
-using FortallCompiler.CodeGeneration.IL;
+using FortallCompiler.IL;
 using Type = FortallCompiler.Ast.Type;
 
 namespace FortallCompiler;
 
-public class IlGenerator
-{
+public class IlGenerator {
+    private ProgramNode program;
     private readonly Stack<ILAddress> freeTemps = new();
     private int tempCounter;
     private string mainLabel;
     
-    public ILProgram GenerateIlCode(ProgramNode program)
-    {
+    public ILProgram GenerateIlCode(ProgramNode program) {
+        this.program = program;
         ILProgram ilProgram = new();
 
         // add global variables
@@ -142,13 +142,18 @@ public class IlGenerator
                 break;
             case AssignmentNode assignStmt:
                 ILAddress valueTemp = Generate(assignStmt.AssignedValue, instructions);
+                ILAddressType type = program.TopLevelNodes.OfType<FieldDeclarationNode>()
+                    .Any(x => x.FieldName == assignStmt.VariableName)
+                    ? ILAddressType.Global
+                    : ILAddressType.Stack;
+                    
                 if (assignStmt.AssignedValue.ExpressionType == Type.String)
                 {
-                    instructions.Add(new ILLoadPtr(new ILAddress(assignStmt.VariableName), valueTemp));
+                    instructions.Add(new ILLoadPtr(new ILAddress(assignStmt.VariableName, type), valueTemp));
                 }
                 else
                 {
-                    instructions.Add(new ILMove(new ILAddress(assignStmt.VariableName), valueTemp));
+                    instructions.Add(new ILMove(new ILAddress(assignStmt.VariableName, type), valueTemp));
                 }
                 ReleaseTemp(valueTemp);
                 break;
@@ -158,7 +163,7 @@ public class IlGenerator
                 ReleaseTemp(writeTemp);
                 break;
             case ReadNode readStmt:
-                instructions.Add(new ILRead(new ILAddress(readStmt.VariableName), scopeData.GetVariable(readStmt.VariableName)!.Type));
+                instructions.Add(new ILRead(new ILAddress(readStmt.VariableName, ILAddressType.Stack), scopeData.GetVariable(readStmt.VariableName)!.Type));
                 break;
             case FunctionCallStatementNode funcCallStmt:
                 FunctionCallExpressionNode funcCall = funcCallStmt.FunctionCallExpression;
@@ -182,11 +187,11 @@ public class IlGenerator
                 ILAddress initValueTemp = Generate(varDecl.InitValue, instructions);
                 if (varDecl.InitValue.ExpressionType == Type.String)
                 {
-                    instructions.Add(new ILLoadPtr(new ILAddress(varDecl.VariableName), initValueTemp));
+                    instructions.Add(new ILLoadPtr(new ILAddress(varDecl.VariableName, ILAddressType.Stack), initValueTemp));
                 }
                 else
                 {
-                    instructions.Add(new ILMove(new ILAddress(varDecl.VariableName), initValueTemp));
+                    instructions.Add(new ILMove(new ILAddress(varDecl.VariableName, ILAddressType.Stack), initValueTemp));
                 }
                 ReleaseTemp(initValueTemp);
                 break;
@@ -199,13 +204,17 @@ public class IlGenerator
             case LiteralExpressionNode lit:
                 if (lit.Type == Type.String)
                 {
-                    return new ILAddress(lit.StringIdentifier!);
+                    return new ILAddress(lit.StringIdentifier!, ILAddressType.Global);
                 }
                 ILAddress tLit = GetTemp();
                 instructions.Add(new ILLoad(tLit, lit.Value));
                 return tLit;
             case IdentifierExpressionNode identifier:
-                return new ILAddress(identifier.Name);
+                ILAddressType type = program.TopLevelNodes.OfType<FieldDeclarationNode>()
+                    .Any(x => x.FieldName == identifier.Name)
+                    ? ILAddressType.Global
+                    : ILAddressType.Stack;
+                return new ILAddress(identifier.Name, type);
             case UnaryExpressionNode un:
                 ILAddress tUnary = GetTemp();
                 ILAddress operand = Generate(un.Operand, instructions);
@@ -243,15 +252,16 @@ public class IlGenerator
         }
         else
         {
-            return new ILAddress($"t{tempCounter++}", true);
+            return new ILAddress($"t{tempCounter++}", ILAddressType.Temporary);
         }
     }
     
     private void ReleaseTemp(ILAddress temp)
     {
-        if (temp.IsTemporary)
+        if(temp.AddressType != ILAddressType.Temporary)
         {
-            freeTemps.Push(temp);
+            return;
         }
+        freeTemps.Push(temp);
     }
 }
