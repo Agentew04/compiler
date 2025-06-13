@@ -10,6 +10,7 @@ public class IlGenerator {
     private readonly Stack<ILAddress> freeTemps = new();
     private int tempCounter;
     private string mainLabel;
+    private readonly Dictionary<string, string> globalLabels = [];
     
     public ILProgram GenerateIlCode(ProgramNode program) {
         this.program = program;
@@ -20,6 +21,7 @@ public class IlGenerator {
         {
             ILGlobalVariable ilGlob = new();
             ilGlob.Name = $"__global_{globalVar.FieldName}";
+            globalLabels[globalVar.FieldName] = ilGlob.Name;
             ilGlob.Type = globalVar.FieldType;
             ilGlob.Value = globalVar.InitValue?.Value;
             ilProgram.Globals.Add(ilGlob);
@@ -146,14 +148,18 @@ public class IlGenerator {
                     .Any(x => x.FieldName == assignStmt.VariableName)
                     ? ILAddressType.Global
                     : ILAddressType.Stack;
+                ILAddress addr = new ILAddress(assignStmt.VariableName, type);
+                if (addr.AddressType == ILAddressType.Global) {
+                    addr.Label = globalLabels[addr.Name];
+                }
                     
                 if (assignStmt.AssignedValue.ExpressionType == Type.String)
                 {
-                    instructions.Add(new ILLoadPtr(new ILAddress(assignStmt.VariableName, type), valueTemp));
+                    instructions.Add(new ILLoadPtr(addr, valueTemp));
                 }
                 else
                 {
-                    instructions.Add(new ILMove(new ILAddress(assignStmt.VariableName, type), valueTemp));
+                    instructions.Add(new ILMove(addr, valueTemp));
                 }
                 ReleaseTemp(valueTemp);
                 break;
@@ -214,7 +220,11 @@ public class IlGenerator {
                     .Any(x => x.FieldName == identifier.Name)
                     ? ILAddressType.Global
                     : ILAddressType.Stack;
-                return new ILAddress(identifier.Name, type);
+                ILAddress addr = new ILAddress(identifier.Name, type);
+                if (addr.AddressType == ILAddressType.Global) {
+                    addr.Label = globalLabels[addr.Name];
+                }
+                return addr;
             case UnaryExpressionNode un:
                 ILAddress tUnary = GetTemp();
                 ILAddress operand = Generate(un.Operand, instructions);

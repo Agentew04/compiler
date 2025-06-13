@@ -1,4 +1,6 @@
 ﻿int result;
+str globalstr := "oi gente!\n";
+
 Funcao main Recebe Nada e Retorna int
     int a := 5;
     int b := 10;
@@ -8,5 +10,6 @@ Fim Funcao
 
 Funcao soma Recebe int x, int y e Retorna int
     result := x + y;
+    result := result + 1;
     Retorna Nada;
 Fim Funcao

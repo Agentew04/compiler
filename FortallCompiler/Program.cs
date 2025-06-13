@@ -51,6 +51,7 @@ class Program
         string asmPath = Path.ChangeExtension(path, ".s");
         FileStream asmFs = File.Open(asmPath, FileMode.OpenOrCreate, FileAccess.Write);
         AssemblyGeneration(ilProgram, sw, ref totalTime, asmFs);
+        asmFs.Dispose();
         
         Compilation(asmPath, sw, ref totalTime);
 
@@ -161,15 +162,21 @@ class Program
         Console.WriteLine();
     }
 
-    private static void Compilation(string path, Stopwatch sw, ref double totalTime)
+    private static bool Compilation(string path, Stopwatch sw, ref double totalTime)
     {
         Console.WriteLine("Comecando a compilacao com ferramenta externa...");
         Compiler compiler = new();
         sw.Restart();
-        compiler.Compile(path);
+        bool success = compiler.Compile(path);
         sw.Stop();
         totalTime += sw.Elapsed.TotalMilliseconds;
-        Console.WriteLine($"Compilacao bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
-        Console.WriteLine();
+        if (success) {
+            Console.WriteLine($"Compilacao bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
+            Console.WriteLine();
+            return true;
+        }
+
+        Console.WriteLine("Ocorreu um erro na compilação :(");
+        return false;
     }
 }

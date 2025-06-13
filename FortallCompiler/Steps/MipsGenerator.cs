@@ -58,16 +58,20 @@ public class MipsGenerator
         int i = 0;
         foreach (string param in function.Parameters)
         {
-            paramSb.Append($"\n#   {param}: a{i}");
+            paramSb.Append($"\n//   {param}: a{i}");
             i++;
         }
         sw.WriteLine($"""
-                      # FUNCAO: {function.Name}
-                      # PARAMETROS:{paramSb}
+                      // FUNCAO: {function.Name}
+                      // PARAMETROS:{paramSb}
                       """);
 
         ILLabel ilLabel = (ILLabel)function.Instructions[0];
         function.Instructions.RemoveAt(0);
+
+        if (function.Name == "main") {
+            sw.WriteLine("__start:");
+        }
         
         sw.WriteLine($"{ilLabel.Name}:");
         
@@ -75,7 +79,7 @@ public class MipsGenerator
         if (function.Name != "main") {
             stackAllocator.AllocateVariable("$ra");
         }
-        sw.WriteLine("\t# Mapa de offsets de variaveis:");
+        sw.WriteLine("\t// Mapa de offsets de variaveis:");
         // aloca todos os parametros
         foreach (string param in function.Parameters)
         {
@@ -88,37 +92,37 @@ public class MipsGenerator
         }
         foreach (string param in function.Parameters)
         {
-            sw.WriteLine($"\t#   {param} -> $sp+{stackAllocator.GetVariableOffset(param)}");
+            sw.WriteLine($"\t//   {param} -> $sp+{stackAllocator.GetVariableOffset(param)}");
         }
         foreach (ILVar varDecl in function.Instructions.OfType<ILVar>())
         {
-            sw.WriteLine($"\t#   {varDecl.Name} -> $sp+{stackAllocator.GetVariableOffset(varDecl.Name)}");
+            sw.WriteLine($"\t//   {varDecl.Name} -> $sp+{stackAllocator.GetVariableOffset(varDecl.Name)}");
         }
         
         // calcula os temporarios
         var temporaries = CollectTemporaries(function.Instructions);
         RegisterAllocator registerAllocator = new();
         // map temporaries to registers
-        sw.WriteLine("\t# Mapa de temporarios para registradores:");
+        sw.WriteLine("\t// Mapa de temporarios para registradores:");
         foreach (ILAddress temporary in temporaries)
         {
             string reg = registerAllocator.AllocateRegister(temporary);
-            sw.WriteLine($"\t#   {temporary} -> {reg}");
+            sw.WriteLine($"\t//   {temporary} -> {reg}");
         } 
 
         // emit prologue
-        sw.WriteLine("\t# PROLOGO");
-        sw.WriteLine($"\taddi $sp, $sp, -{stackAllocator.GetStackSize()} # aloca espaco na pilha");
+        sw.WriteLine("\t// PROLOGO");
+        sw.WriteLine($"\taddi $sp, $sp, -{stackAllocator.GetStackSize()} // aloca espaco na pilha");
         if (function.Name != "main") {
-            sw.WriteLine($"\tsw $ra, {stackAllocator.GetVariableOffset("$ra")}($sp) # salva endereco de retorno");
+            sw.WriteLine($"\tsw $ra, {stackAllocator.GetVariableOffset("$ra")}($sp) // salva endereco de retorno");
         }
 
         // salva parametros no stack
         for (i = 0; i < function.Parameters.Count; i++) {
-            sw.WriteLine($"\tsw $a{i}, {stackAllocator.GetVariableOffset(function.Parameters[i])} # salva argumento {function.Parameters[i]} na pilha");
+            sw.WriteLine($"\tsw $a{i}, {stackAllocator.GetVariableOffset(function.Parameters[i])} // salva argumento {function.Parameters[i]} na pilha");
         }
 
-        sw.WriteLine("\t# CORPO");
+        sw.WriteLine("\t// CORPO");
         foreach (ILInstruction instruction in function.Instructions)
         {
             switch (instruction)
@@ -170,7 +174,7 @@ public class MipsGenerator
         // restore $ra
         bool isMain = stackAllocator.GetVariableOffset("$ra") == -1; 
         if (!isMain) {
-            sw.WriteLine($"\tlw $ra, {stackAllocator.GetVariableOffset("$ra")}($sp) # restaura endereco de retorno");
+            sw.WriteLine($"\tlw $ra, {stackAllocator.GetVariableOffset("$ra")}($sp) // restaura endereco de retorno");
         }
         if (ret.Value is not null)
         {
@@ -178,35 +182,35 @@ public class MipsGenerator
             {
                 // se eh temporario, load no v0
                 string reg = registerAllocator.GetRegister(ret.Value);
-                sw.WriteLine($"\taddi $v0, {reg}, $zero # carrega valor de retorno");
+                sw.WriteLine($"\tadd $v0, {reg}, $zero // carrega valor de retorno");
             }else if (ret.Value.AddressType == ILAddressType.Global) {
-                sw.WriteLine($"\tlw $v0, {ret.Value.Name}");
+                sw.WriteLine($"\tlw $v0, {ret.Value.Label}");
             }
             else
             {
                 // senao load da stack para v0
                 int offset = stackAllocator.GetVariableOffset(ret.Value.Name);
-                sw.WriteLine($"\tlw $v0, +{offset}($sp) # carrega valor de retorno");
+                sw.WriteLine($"\tlw $v0, +{offset}($sp) // carrega valor de retorno");
             }
         }
         else {
-            sw.WriteLine("\taddi $v0, $zero, $zero # funcao nao tem retorno, seta como 0");
+            sw.WriteLine("\tadd $v0, $zero, $zero // funcao nao tem retorno, seta como 0");
         }
         // libera a memoria do stack
-        sw.WriteLine($"\taddi $sp, $sp, {stackAllocator.GetStackSize()} # libera espaco na pilha");
+        sw.WriteLine($"\taddi $sp, $sp, {stackAllocator.GetStackSize()} // libera espaco na pilha");
         // retorna
         if (isMain) {
             // termina a execucao
             int syscall = ret.Value is not null ? 17 : 10;
             if (syscall == 17) {
-                sw.WriteLine("\tadd $a0, $v0, $zero # passa codigo de saida do programa");
+                sw.WriteLine("\tadd $a0, $v0, $zero // passa codigo de saida do programa");
             }
             sw.WriteLine($"\tli $v0, {syscall}");
-            sw.WriteLine("\tsyscall # termina a execucao");
+            sw.WriteLine("\tsyscall // termina a execucao");
         }
         else {
             // volta pra funcao anterior
-            sw.WriteLine("\tjr $ra # retorna");
+            sw.WriteLine("\tjr $ra // retorna");
         }
     }
     
@@ -217,25 +221,25 @@ public class MipsGenerator
             case ILAddressType.Temporary:
                 throw new Exception("erro!. load ptr n pode ser usado com registradores.");
             case ILAddressType.Global:
-                sw.WriteLine($"\tla $at, {loadptr.Src.Name} # carrega endereco de {loadptr.Src.Name} em $at");
+                sw.WriteLine($"\tla $at, {loadptr.Src.Label} // carrega endereco de {loadptr.Src.Name} em $at");
                 break;
             case ILAddressType.Stack:
                 // ta na stack
-                sw.WriteLine($"\tadd $at, $sp, {stackAllocator.GetVariableOffset(loadptr.Src.Name)} # carrega endereco de {loadptr.Src.Name} em $at");
+                sw.WriteLine($"\tadd $at, $sp, {stackAllocator.GetVariableOffset(loadptr.Src.Name)} // carrega endereco de {loadptr.Src.Name} em $at");
                 break;
         }
 
         switch (loadptr.Dest.AddressType) {
             case ILAddressType.Temporary:
-                sw.WriteLine($"\taddi {registerAllocator.GetRegister(loadptr.Dest)}, $at, 0 # carrega endereco de {loadptr.Src.Name} em {loadptr.Dest}");
+                sw.WriteLine($"\taddi {registerAllocator.GetRegister(loadptr.Dest)}, $at, 0 // carrega endereco de {loadptr.Src.Name} em {loadptr.Dest}");
                 break;
             case ILAddressType.Global:
                 // e depois copia o valor do ponteiro para a variavel global
-                sw.WriteLine($"\tsw $at, {loadptr.Dest.Name} # armazena endereco de {loadptr.Src.Name} em {loadptr.Dest.Name}");
+                sw.WriteLine($"\tsw $at, {loadptr.Dest.Label} // armazena endereco de {loadptr.Src.Name} em {loadptr.Dest.Name}");
                 break;
             case ILAddressType.Stack:
                 // eh stack
-                sw.WriteLine($"\tsw $at, {stackAllocator.GetVariableOffset(loadptr.Dest.Name)}($sp) # armazena endereco de {loadptr.Src.Name} em {loadptr.Dest}");
+                sw.WriteLine($"\tsw $at, {stackAllocator.GetVariableOffset(loadptr.Dest.Name)}($sp) // armazena endereco de {loadptr.Src.Name} em {loadptr.Dest}");
                 break;
         }
     }
@@ -257,17 +261,17 @@ public class MipsGenerator
         switch (load.Dest.AddressType) {
             case ILAddressType.Temporary:
                 // em registrador
-                sw.WriteLine($"\taddi {registerAllocator.GetRegister(load.Dest)}, $zero, {value} # guarda valor {value} em {load.Dest}");
+                sw.WriteLine($"\taddi {registerAllocator.GetRegister(load.Dest)}, $zero, {value} // guarda valor {value} em {load.Dest}");
                 break;
             case ILAddressType.Stack:
                 // no stack
                 sw.WriteLine($"\taddi $at, $zero, {value}");
-                sw.WriteLine($"\tsw $at, {stackAllocator.GetVariableOffset(load.Dest.Name)}($sp) # guarda valor {value} em {load.Dest}");
+                sw.WriteLine($"\tsw $at, {stackAllocator.GetVariableOffset(load.Dest.Name)}($sp) // guarda valor {value} em {load.Dest}");
                 break;
             case ILAddressType.Global:
                 // global
                 sw.WriteLine($"\taddi $at, $zero, {value}");
-                sw.WriteLine($"\tsw $at, {load.Dest.Name} # guarda valor {value} em {load.Dest.Name}");
+                sw.WriteLine($"\tsw $at, {load.Dest.Label} // guarda valor {value} em {load.Dest.Name}");
                 break;
         }
     }
@@ -280,11 +284,11 @@ public class MipsGenerator
                 sw.WriteLine($"\tadd $at, {registerAllocator.GetRegister(unaryOp.Operand)}, $zero");
                 break;
             case ILAddressType.Global:
-                sw.WriteLine($"\tlw $at, {unaryOp.Operand.Name} # carrega valor de {unaryOp.Operand.Name} em $at");
+                sw.WriteLine($"\tlw $at, {unaryOp.Operand.Label} // carrega valor de {unaryOp.Operand.Name} em $at");
                 break;
             default:
                 // stack
-                sw.WriteLine($"\tlw $at, {stackAllocator.GetVariableOffset(unaryOp.Operand.Name)}($sp) # carrega valor de {unaryOp.Operand.Name} em $at");
+                sw.WriteLine($"\tlw $at, {stackAllocator.GetVariableOffset(unaryOp.Operand.Name)}($sp) // carrega valor de {unaryOp.Operand.Name} em $at");
                 break;
         }
         
@@ -292,7 +296,7 @@ public class MipsGenerator
         switch (unaryOp.Op)
         {
             case UnaryOperationType.Not:
-                sw.WriteLine($"\txori $at, $at, 1 # nega valor de {unaryOp.Operand} e armazena em {unaryOp.Dest}");
+                sw.WriteLine($"\txori $at, $at, 1 // nega valor de {unaryOp.Operand} e armazena em {unaryOp.Dest}");
                 break;
             default:
                 throw new NotSupportedException($"Unsupported unary operation: {unaryOp.Op}");
@@ -301,14 +305,14 @@ public class MipsGenerator
         switch (unaryOp.Dest.AddressType) {
             // resultado esta no $at
             case ILAddressType.Temporary:
-                sw.WriteLine($"\tadd {registerAllocator.GetRegister(unaryOp.Dest)}, $at, $zero # armazena resultado de {unaryOp.Operand} em {unaryOp.Dest}");
+                sw.WriteLine($"\tadd {registerAllocator.GetRegister(unaryOp.Dest)}, $at, $zero // armazena resultado de {unaryOp.Operand} em {unaryOp.Dest}");
                 break;
             case ILAddressType.Global:
-                sw.WriteLine($"\tsw $at, {unaryOp.Dest.Name} # armazena resultado de {unaryOp.Operand} em {unaryOp.Dest.Name}");
+                sw.WriteLine($"\tsw $at, {unaryOp.Dest.Label} // armazena resultado de {unaryOp.Operand} em {unaryOp.Dest.Name}");
                 break;
             case ILAddressType.Stack:
                 // stack
-                sw.WriteLine($"\tsw $at, {stackAllocator.GetVariableOffset(unaryOp.Dest.Name)}($sp) # armazena resultado de {unaryOp.Operand} em {unaryOp.Dest}");
+                sw.WriteLine($"\tsw $at, {stackAllocator.GetVariableOffset(unaryOp.Dest.Name)}($sp) // armazena resultado de {unaryOp.Operand} em {unaryOp.Dest}");
                 break;
         }
     }
@@ -318,7 +322,7 @@ public class MipsGenerator
     {
         if (move.Src.AddressType == ILAddressType.Temporary && move.Dest.AddressType == ILAddressType.Temporary)
         {
-            sw.WriteLine($"\tadd {registerAllocator.GetRegister(move.Dest)}, {registerAllocator.GetRegister(move.Src)}, $zero # move {move.Src} para {move.Dest}");
+            sw.WriteLine($"\tadd {registerAllocator.GetRegister(move.Dest)}, {registerAllocator.GetRegister(move.Src)}, $zero // move {move.Src} para {move.Dest}");
             return;
         }
 
@@ -328,25 +332,25 @@ public class MipsGenerator
                 dest = registerAllocator.GetRegister(move.Src);
                 break;
             case ILAddressType.Global:
-                sw.WriteLine($"\tlw $at, {move.Src.Name} # carrega valor de {move.Src.Name} em $at");
+                sw.WriteLine($"\tlw $at, {move.Src.Label} // carrega valor de {move.Src.Name} em $at");
                 break;
             default:
                 // stack
-                sw.WriteLine($"\tlw $at, {stackAllocator.GetVariableOffset(move.Src.Name)}($sp) # carrega valor de {move.Src.Name} em $at");
+                sw.WriteLine($"\tlw $at, {stackAllocator.GetVariableOffset(move.Src.Name)}($sp) // carrega valor de {move.Src.Name} em $at");
                 break;
         }
 
         switch (move.Dest.AddressType) {
             // valor esta em dest
             case ILAddressType.Temporary:
-                sw.WriteLine($"\tadd {registerAllocator.GetRegister(move.Dest)}, {dest}, $zero # move valor de {move.Src} para {move.Dest}");
+                sw.WriteLine($"\tadd {registerAllocator.GetRegister(move.Dest)}, {dest}, $zero // move valor de {move.Src} para {move.Dest}");
                 break;
             case ILAddressType.Global:
-                sw.WriteLine($"\tsw {dest}, {move.Dest.Name} # move valor de {move.Src} para {move.Dest.Name}");
+                sw.WriteLine($"\tsw {dest}, {move.Dest.Label} // move valor de {move.Src} para {move.Dest.Name}");
                 break;
             case ILAddressType.Stack:
                 // stack
-                sw.WriteLine($"\tsw {dest}, {stackAllocator.GetVariableOffset(move.Dest.Name)}($sp) # move valor de {move.Src} para {move.Dest}");
+                sw.WriteLine($"\tsw {dest}, {stackAllocator.GetVariableOffset(move.Dest.Name)}($sp) // move valor de {move.Src} para {move.Dest}");
                 break;
         }
     }
@@ -362,20 +366,20 @@ public class MipsGenerator
             throw new NotSupportedException("Condition must be a temporary address. This is a TODO");
         }
         string reg = registerAllocator.GetRegister(ifGoto.Condition);
-        sw.WriteLine($"\tbnez {reg}, {ifGoto.Label} # se {ifGoto.Condition} for diferente de zero, pula para {ifGoto.Label}");
+        sw.WriteLine($"\tbnez {reg}, {ifGoto.Label} // se {ifGoto.Condition} for diferente de zero, pula para {ifGoto.Label}");
     }
     
     private void Generate(ILLabel label, StreamWriter sw, StackAllocator stackAllocator,
         RegisterAllocator registerAllocator)
     {
-        sw.WriteLine($"\t{label.Name}: # label {label.Name}");
+        sw.WriteLine($"\t{label.Name}: // label {label.Name}");
     }
     
     private void Generate(ILGoto goTo, StreamWriter sw, StackAllocator stackAllocator,
         RegisterAllocator registerAllocator)
     {
         // j
-        sw.WriteLine($"\tj {goTo.Label} # pula para {goTo.Label}");
+        sw.WriteLine($"\tj {goTo.Label} // pula para {goTo.Label}");
     }
 
     private void Generate(ILCall call, StreamWriter sw, StackAllocator stackAllocator,
@@ -391,15 +395,15 @@ public class MipsGenerator
             switch (arg.AddressType) {
                 case ILAddressType.Temporary:
                     // se eh temporario, carrega no registrador de argumento
-                    sw.WriteLine($"\tadd $a{i}, {registerAllocator.GetRegister(arg)}, $zero # carrega argumento {i} ({arg})");
+                    sw.WriteLine($"\tadd $a{i}, {registerAllocator.GetRegister(arg)}, $zero // carrega argumento {i} ({arg})");
                     break;
                 case ILAddressType.Global:
                     // se eh global, carrega no registrador de argumento
-                    sw.WriteLine($"\tlw $a{i}, {arg.Name} # carrega argumento {i} ({arg})");
+                    sw.WriteLine($"\tlw $a{i}, {arg.Label} // carrega argumento {i} ({arg})");
                     break;
                 case ILAddressType.Stack:
                     // se eh stack, carrega no registrador de argumento
-                    sw.WriteLine($"\tlw $a{i}, {stackAllocator.GetVariableOffset(arg.Name)}($sp) # carrega argumento {i} ({arg})");
+                    sw.WriteLine($"\tlw $a{i}, {stackAllocator.GetVariableOffset(arg.Name)}($sp) // carrega argumento {i} ({arg})");
                     break;
             }
         }
@@ -407,13 +411,13 @@ public class MipsGenerator
         // argumentos preparados, agora tem que salvar o valor dos temporarios utilizados
         List<string> used = registerAllocator.GetUsedRegisters();
         // allocate memory for each used register
-        sw.WriteLine("\t# SALVA TEMPORARIOS");
-        sw.WriteLine($"\taddi $sp, $sp, -{used.Count * 4} # aloca espaco na pilha para temporarios");
+        sw.WriteLine("\t// SALVA TEMPORARIOS");
+        sw.WriteLine($"\taddi $sp, $sp, -{used.Count * 4} // aloca espaco na pilha para temporarios");
         for (int i = 0; i < used.Count; i++)
         {
             string reg = used[i];
             // save each register to the stack
-            sw.WriteLine($"\tsw {reg}, {i * 4}($sp) # salva {reg} na pilha");
+            sw.WriteLine($"\tsw {reg}, {i * 4}($sp) // salva {reg} na pilha");
         }
         // chama a funcao
         string funcLabel = null!;
@@ -422,33 +426,33 @@ public class MipsGenerator
             if(func.Name != call.FunctionName) continue;
             funcLabel = func.Label;
         }
-        sw.WriteLine($"\tjal {funcLabel} # chama funcao {call.FunctionName}");
+        sw.WriteLine($"\tjal {funcLabel} // chama funcao {call.FunctionName}");
         // agora restaura os temporarios
-        sw.WriteLine("\t# RESTAURA TEMPORARIOS");
+        sw.WriteLine("\t// RESTAURA TEMPORARIOS");
         for (int i = used.Count - 1; i >= 0; i--)
         {
             string reg = used[i];
             // restore each register from the stack
-            sw.WriteLine($"\tlw {reg}, {i * 4}($sp) # restaura {reg} da pilha");
+            sw.WriteLine($"\tlw {reg}, {i * 4}($sp) // restaura {reg} da pilha");
             // n descarta pq ainda vai usar p frente
         }
         // desaloca o espaco da pilha dos temporarios
-        sw.WriteLine($"\taddi $sp, $sp, {used.Count * 4} # libera espaco na pilha dos temporarios");
+        sw.WriteLine($"\taddi $sp, $sp, {used.Count * 4} // libera espaco na pilha dos temporarios");
         
         // se a funcao tem retorno, pega do v0
         if (call.Dest is null) return;
         switch (call.Dest.AddressType) {
             case ILAddressType.Temporary:
                 // se eh temporario, carrega no registrador de destino
-                sw.WriteLine($"\tadd {registerAllocator.GetRegister(call.Dest)}, $v0, $zero # carrega retorno da funcao em {call.Dest}");
+                sw.WriteLine($"\tadd {registerAllocator.GetRegister(call.Dest)}, $v0, $zero // carrega retorno da funcao em {call.Dest}");
                 break;
             case ILAddressType.Global:
                 // se eh global, carrega no registrador de destino
-                sw.WriteLine($"\tsw $v0, {call.Dest.Name} # armazena retorno da funcao em {call.Dest.Name}");
+                sw.WriteLine($"\tsw $v0, {call.Dest.Label} // armazena retorno da funcao em {call.Dest.Name}");
                 break;
             case ILAddressType.Stack:
                 // se eh stack, carrega no registrador de destino
-                sw.WriteLine($"\tsw $v0, {stackAllocator.GetVariableOffset(call.Dest.Name)}($sp) # armazena retorno da funcao em {call.Dest}");
+                sw.WriteLine($"\tsw $v0, {stackAllocator.GetVariableOffset(call.Dest.Name)}($sp) // armazena retorno da funcao em {call.Dest}");
                 break;
         }
     }
@@ -467,11 +471,11 @@ public class MipsGenerator
                 leftReg = registerAllocator.GetRegister(binaryOp.Left);
                 break;
             case ILAddressType.Global:
-                sw.WriteLine($"\tlw $at, {binaryOp.Left.Name} # carrega valor de {binaryOp.Left.Name} em $at");
+                sw.WriteLine($"\tlw $at, {binaryOp.Left.Label} // carrega valor de {binaryOp.Left.Name} em $at");
                 break;
             case ILAddressType.Stack:
                 // stack
-                sw.WriteLine($"\tlw $at, {stackAllocator.GetVariableOffset(binaryOp.Left.Name)}($sp) # carrega valor de {binaryOp.Left.Name} em $at");
+                sw.WriteLine($"\tlw $at, {stackAllocator.GetVariableOffset(binaryOp.Left.Name)}($sp) // carrega valor de {binaryOp.Left.Name} em $at");
                 break;
         }
 
@@ -483,13 +487,13 @@ public class MipsGenerator
             case ILAddressType.Global:
                 rightReg = leftUsesAt ? registerAllocator.AllocateRegister(binaryOp.Right) : "$at";
                 rightAllocated = rightReg != "$at";
-                sw.WriteLine($"\tlw {rightReg}, {binaryOp.Right.Name} # carrega valor de {binaryOp.Right.Name} em {rightReg}");
+                sw.WriteLine($"\tlw {rightReg}, {binaryOp.Right.Label} // carrega valor de {binaryOp.Right.Name} em {rightReg}");
                 break;
             case ILAddressType.Stack:
                 // no stack
                 rightReg = leftUsesAt ? registerAllocator.AllocateRegister(binaryOp.Right) : "$at";
                 rightAllocated = rightReg != "$at";
-                sw.WriteLine($"\tlw {rightReg}, {stackAllocator.GetVariableOffset(binaryOp.Right.Name)}($sp) # carrega valor de {binaryOp.Right.Name} em {rightReg}");
+                sw.WriteLine($"\tlw {rightReg}, {stackAllocator.GetVariableOffset(binaryOp.Right.Name)}($sp) // carrega valor de {binaryOp.Right.Name} em {rightReg}");
                 break;
         }
         
@@ -497,41 +501,41 @@ public class MipsGenerator
         switch (binaryOp.Op)
         {
             case BinaryOperationType.Addition:
-                sw.WriteLine($"\tadd $at, {leftReg}, {rightReg} # soma {binaryOp.Left} e {binaryOp.Right}");
+                sw.WriteLine($"\tadd $at, {leftReg}, {rightReg} // soma {binaryOp.Left} e {binaryOp.Right}");
                 break;
             case BinaryOperationType.Subtraction:
-                sw.WriteLine($"\tsub $at, {leftReg}, {rightReg} # subtrai {binaryOp.Right} de {binaryOp.Left}");
+                sw.WriteLine($"\tsub $at, {leftReg}, {rightReg} // subtrai {binaryOp.Right} de {binaryOp.Left}");
                 break;
             case BinaryOperationType.Multiplication:
                 // MUL coloca resultado no HI e LO e copia do LO para $at
-                sw.WriteLine($"\tmul $at, {leftReg}, {rightReg} # multiplica {binaryOp.Left} e {binaryOp.Right}");
+                sw.WriteLine($"\tmul $at, {leftReg}, {rightReg} // multiplica {binaryOp.Left} e {binaryOp.Right}");
                 break;
             case BinaryOperationType.Division:
-                sw.WriteLine($"\tdiv $at, {leftReg}, {rightReg} # divide {binaryOp.Left} por {binaryOp.Right}");
+                sw.WriteLine($"\tdiv $at, {leftReg}, {rightReg} // divide {binaryOp.Left} por {binaryOp.Right}");
                 break;
             case BinaryOperationType.Equals:
-                sw.WriteLine($"\tseq $at, {leftReg}, {rightReg} # compara {binaryOp.Left} == {binaryOp.Right}");
+                sw.WriteLine($"\tseq $at, {leftReg}, {rightReg} // compara {binaryOp.Left} == {binaryOp.Right}");
                 break;
             case BinaryOperationType.NotEquals:
-                sw.WriteLine($"\tsne $at, {leftReg}, {rightReg} # compara {binaryOp.Left} != {binaryOp.Right}");
+                sw.WriteLine($"\tsne $at, {leftReg}, {rightReg} // compara {binaryOp.Left} != {binaryOp.Right}");
                 break;
             case BinaryOperationType.LessThan:
-                sw.WriteLine($"\tslt $at, {leftReg}, {rightReg} # compara {binaryOp.Left} < {binaryOp.Right}");
+                sw.WriteLine($"\tslt $at, {leftReg}, {rightReg} // compara {binaryOp.Left} < {binaryOp.Right}");
                 break;
             case BinaryOperationType.LessEqualThan:
-                sw.WriteLine($"\tsle $at, {leftReg}, {rightReg} # compara {binaryOp.Left} <= {binaryOp.Right}");
+                sw.WriteLine($"\tsle $at, {leftReg}, {rightReg} // compara {binaryOp.Left} <= {binaryOp.Right}");
                 break;
             case BinaryOperationType.GreaterThan:
-                sw.WriteLine($"\tsgt $at, {leftReg}, {rightReg} # compara {binaryOp.Left} > {binaryOp.Right}");
+                sw.WriteLine($"\tsgt $at, {leftReg}, {rightReg} // compara {binaryOp.Left} > {binaryOp.Right}");
                 break;
             case BinaryOperationType.GreaterEqualThan:
-                sw.WriteLine($"\tsge $at, {leftReg}, {rightReg} # compara {binaryOp.Left} >= {binaryOp.Right}");
+                sw.WriteLine($"\tsge $at, {leftReg}, {rightReg} // compara {binaryOp.Left} >= {binaryOp.Right}");
                 break;
             case BinaryOperationType.And:
-                sw.WriteLine($"\tand $at, {leftReg}, {rightReg} # realiza AND bit a bit entre {binaryOp.Left} e {binaryOp.Right}");
+                sw.WriteLine($"\tand $at, {leftReg}, {rightReg} // realiza AND bit a bit entre {binaryOp.Left} e {binaryOp.Right}");
                 break;
             case BinaryOperationType.Or:
-                sw.WriteLine($"\tor $at, {leftReg}, {rightReg} # realiza OR bit a bit entre {binaryOp.Left} e {binaryOp.Right}");
+                sw.WriteLine($"\tor $at, {leftReg}, {rightReg} // realiza OR bit a bit entre {binaryOp.Left} e {binaryOp.Right}");
                 break;
             default:
                 throw new NotSupportedException($"Unsupported binary operation: {binaryOp.Op}");
@@ -542,14 +546,14 @@ public class MipsGenerator
 
         switch (binaryOp.Dest.AddressType) {
             case ILAddressType.Temporary:
-                sw.WriteLine($"\tadd {registerAllocator.GetRegister(binaryOp.Dest)}, $at, $zero # armazena resultado de {binaryOp.Left} e {binaryOp.Right} em {binaryOp.Dest}");
+                sw.WriteLine($"\tadd {registerAllocator.GetRegister(binaryOp.Dest)}, $at, $zero // armazena resultado de {binaryOp.Left} e {binaryOp.Right} em {binaryOp.Dest}");
                 break;
             case ILAddressType.Global:
-                sw.WriteLine($"\tsw $at, {binaryOp.Dest.Name} # armazena resultado de {binaryOp.Left} e {binaryOp.Right} em {binaryOp.Dest.Name}");
+                sw.WriteLine($"\tsw $at, {binaryOp.Dest.Label} // armazena resultado de {binaryOp.Left} e {binaryOp.Right} em {binaryOp.Dest.Name}");
                 break;
             case ILAddressType.Stack:
                 // stack
-                sw.WriteLine($"\tsw $at, {stackAllocator.GetVariableOffset(binaryOp.Dest.Name)}($sp) # armazena resultado de {binaryOp.Left} e {binaryOp.Right} em {binaryOp.Dest}");
+                sw.WriteLine($"\tsw $at, {stackAllocator.GetVariableOffset(binaryOp.Dest.Name)}($sp) // armazena resultado de {binaryOp.Left} e {binaryOp.Right} em {binaryOp.Dest}");
                 break;
         }
 
@@ -580,20 +584,20 @@ public class MipsGenerator
         switch (write.Src.AddressType) {
             // move argumento para $a0
             case ILAddressType.Temporary:
-                sw.WriteLine($"\tadd $a0, {registerAllocator.GetRegister(write.Src)}, $zero # move valor de {write.Src} para $a0 para syscall");
+                sw.WriteLine($"\tadd $a0, {registerAllocator.GetRegister(write.Src)}, $zero // move valor de {write.Src} para $a0 para syscall");
                 break;
             case ILAddressType.Global:
-                sw.WriteLine($"\tlw $a0, {write.Src.Name} # carrega valor de {write.Src.Name} em $a0");
+                sw.WriteLine($"\tlw $a0, {write.Src.Label} // carrega valor de {write.Src.Name} em $a0");
                 break;
             case ILAddressType.Stack:
                 // stack
-                sw.WriteLine($"\tlw $a0, {stackAllocator.GetVariableOffset(write.Src.Name)}($sp) # carrega valor de {write.Src.Name} em $a0");
+                sw.WriteLine($"\tlw $a0, {stackAllocator.GetVariableOffset(write.Src.Name)}($sp) // carrega valor de {write.Src.Name} em $a0");
                 break;
         }
         // coloca valor da syscall em v0
         sw.WriteLine($"\taddi $v0, $zero, {syscall}");
         // faz syscall
-        sw.WriteLine($"\tsyscall # faz syscall {syscall} para escrever {write.WriteType}");
+        sw.WriteLine($"\tsyscall // faz syscall {syscall} para escrever {write.WriteType}");
     }
 
     private void Generate(ILRead read, StreamWriter sw, StackAllocator stackAllocator,
@@ -616,7 +620,7 @@ public class MipsGenerator
             return;
         }
         // coloca syscall em v0
-        sw.WriteLine($"\taddi $v0, $zero, {syscall} # syscall {syscall} para ler {read.ReadType}");
+        sw.WriteLine($"\taddi $v0, $zero, {syscall} // syscall {syscall} para ler {read.ReadType}");
         // passa argumentos
         if (read.ReadType == Type.String)
         {
@@ -625,31 +629,31 @@ public class MipsGenerator
             
             if (read.Dest.AddressType == ILAddressType.Global)
             {
-                sw.WriteLine($"\tla $a0, {read.Dest.Name} # carrega endereco de {read.Dest.Name} em $a0");
+                sw.WriteLine($"\tla $a0, {read.Dest.Label} // carrega endereco de {read.Dest.Name} em $a0");
             }
             else
             {
                 // stack
-                sw.WriteLine($"\tadd $a0, $sp, {stackAllocator.GetVariableOffset(read.Dest.Name)} # carrega endereco de {read.Dest.Name} em $a0");
+                sw.WriteLine($"\tadd $a0, $sp, {stackAllocator.GetVariableOffset(read.Dest.Name)} // carrega endereco de {read.Dest.Name} em $a0");
             }
             // $at tem o endereco da string
-            sw.WriteLine($"\tadd $a0, $at, $zero # move endereco base da string para $a0");
-            sw.WriteLine($"\taddi $a1, $zero, 256 # tamanho maximo da string lida");
+            sw.WriteLine($"\tadd $a0, $at, $zero // move endereco base da string para $a0");
+            sw.WriteLine($"\taddi $a1, $zero, 256 // tamanho maximo da string lida");
         }
-        sw.WriteLine($"\tsyscall # faz syscall {syscall}");
+        sw.WriteLine($"\tsyscall // faz syscall {syscall}");
 
         if (read.ReadType == Type.String) return;
         switch (read.Dest.AddressType) {
             // resultado esta no $v0
             case ILAddressType.Temporary:
-                sw.WriteLine($"\tadd {registerAllocator.GetRegister(read.Dest)}, $v0, $zero # armazena resultado de leitura em {read.Dest}");
+                sw.WriteLine($"\tadd {registerAllocator.GetRegister(read.Dest)}, $v0, $zero // armazena resultado de leitura em {read.Dest}");
                 break;
             case ILAddressType.Global:
-                sw.WriteLine($"\tsw $v0, {read.Dest.Name} # armazena resultado de leitura em {read.Dest.Name}");
+                sw.WriteLine($"\tsw $v0, {read.Dest.Label} // armazena resultado de leitura em {read.Dest.Name}");
                 break;
             case ILAddressType.Stack:
                 // stack
-                sw.WriteLine($"\tsw $v0, {stackAllocator.GetVariableOffset(read.Dest.Name)}($sp) # armazena resultado de leitura em {read.Dest}");
+                sw.WriteLine($"\tsw $v0, {stackAllocator.GetVariableOffset(read.Dest.Name)}($sp) // armazena resultado de leitura em {read.Dest}");
                 break;
         }
     }
@@ -749,6 +753,9 @@ public class MipsGenerator
     private string EscapeString(string value)
     {
         ArgumentNullException.ThrowIfNull(value);
+        if (value.StartsWith('"') && value.EndsWith('"')) {
+            value = value.Substring(1, value.Length - 2);
+        }
 
         StringBuilder result = new(value.Length + value.Length / 2);
 
@@ -764,7 +771,7 @@ public class MipsGenerator
                 case '\v': result.Append(@"\v"); break;
                 case '\f': result.Append(@"\f"); break;
                 case '\r': result.Append(@"\r"); break;
-                case '\\': result.Append(@"\\"); break;
+                case '\\': result.Append(@"\"); break;
                 case '"': result.Append(@"\"""); break;
                 default:
                     if (c >= ' ')

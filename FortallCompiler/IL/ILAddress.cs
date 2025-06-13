@@ -6,6 +6,8 @@ public class ILAddress : IComparable<ILAddress>
     
     public ILAddressType AddressType { get; }
     
+    public string? Label { get; set; }
+    
     public ILAddress(string name, ILAddressType addressType)
     {
         Name = name;
