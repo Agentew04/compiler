@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace FortallCompiler;
 
-public class Compiler {
+public class Assembler {
     
     public bool Compile(string path) {
         string tempPath = Path.GetTempPath();

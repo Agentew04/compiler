@@ -53,7 +53,7 @@ class Program
         AssemblyGeneration(ilProgram, sw, ref totalTime, asmFs);
         asmFs.Dispose();
         
-        Compilation(asmPath, sw, ref totalTime);
+        Assemble(asmPath, sw, ref totalTime);
 
         Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
         Console.WriteLine("Executar? (S/n)");
@@ -162,21 +162,21 @@ class Program
         Console.WriteLine();
     }
 
-    private static bool Compilation(string path, Stopwatch sw, ref double totalTime)
+    private static bool Assemble(string path, Stopwatch sw, ref double totalTime)
     {
-        Console.WriteLine("Comecando a compilacao com ferramenta externa...");
-        Compiler compiler = new();
+        Console.WriteLine("Comecando a montagem com ferramenta externa...");
+        Assembler assembler = new();
         sw.Restart();
-        bool success = compiler.Compile(path);
+        bool success = assembler.Compile(path);
         sw.Stop();
         totalTime += sw.Elapsed.TotalMilliseconds;
         if (success) {
-            Console.WriteLine($"Compilacao bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
+            Console.WriteLine($"Montagem bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
             Console.WriteLine();
             return true;
         }
 
-        Console.WriteLine("Ocorreu um erro na compilação :(");
+        Console.WriteLine("Ocorreu um erro na montagem :(");
         return false;
     }
 }
