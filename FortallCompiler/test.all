@@ -1,5 +1,7 @@
 ﻿Funcao main Recebe Nada e Retorna int
-    int a := fibonacci(1);
+    int a := fibonacci(2);
+    Escrever a;
+    Escrever "\n";
     Retorna a;
 Fim Funcao
 

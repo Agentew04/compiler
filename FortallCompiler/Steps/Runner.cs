@@ -21,10 +21,15 @@ public class Runner {
         ELF<uint> elf = ELFReader.Load<uint>(path);
         
         machine.LoadElf(elf);
-
-        Stopwatch sw = new();
         machine.Registers[RegisterFile.Register.Pc] = 0x0040_0000;
         machine.Cpu.UseBranchDelaySlot = false;
+
+        Console.WriteLine("-=-=- MAQUINA -=-=-");
+        Console.WriteLine("OS: " + machine.Os.FriendlyName);
+        Console.WriteLine("Architecture: " + machine.Os.CompatibleArchitecture);
+        Console.WriteLine("-=-=- EXECUCAO -=-=-");
+
+        Stopwatch sw = new();
         sw.Start();
         ulong clocks = 0;
         while (!machine.IsClockingFinished()) {

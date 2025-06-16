@@ -193,14 +193,21 @@ public static class Program
         bool success = assembler.Compile(path, out outputPath);
         sw.Stop();
         totalTime += sw.Elapsed.TotalMilliseconds;
-        if (success) {
-            Console.WriteLine($"Montagem bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
-            Console.WriteLine();
-            return true;
+        if (!success)
+        {
+            Console.WriteLine("Ocorreu um erro na montagem :(");
+            return false;
         }
 
-        Console.WriteLine("Ocorreu um erro na montagem :(");
-        return false;
+        Console.WriteLine($"Montagem bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
+        
+        Console.WriteLine("Deseja ver os headers do ELF e o DISSASSEMBLY? (S/N)");
+        string? input = Console.ReadLine();
+        if (input is not null && input.ToUpper() == "S") {
+            assembler.ShowMetrics(outputPath);
+        }
+        Console.WriteLine();
+        return true;
     }
 
     private static void Run(string path) {

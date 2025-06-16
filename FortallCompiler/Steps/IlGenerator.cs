@@ -209,7 +209,11 @@ public class IlGenerator {
             case LiteralExpressionNode lit:
                 if (lit.Type == Type.String)
                 {
-                    return new ILAddress(lit.StringIdentifier!, ILAddressType.Global);
+                    ILAddress straddr = new(lit.StringIdentifier!, ILAddressType.Global)
+                    {
+                        Label = lit.StringIdentifier!
+                    };
+                    return straddr;
                 }
                 ILAddress tLit = GetTemp();
                 instructions.Add(new ILLoad(tLit, lit.Value));

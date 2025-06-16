@@ -19,7 +19,7 @@ public class Assembler {
         string args =
             $"--target=mips-linux-gnu -O0 -fno-pic -mno-abicalls -nostartfiles -T \"{linkerPath}\" -nostdlib -fuse-ld=lld -static \"{path}\"  -o \"{outputPath}\"";
 
-        Console.WriteLine("Args: " + args);
+        Console.WriteLine($"Args: clang.exe {args}");
         ProcessStartInfo processStartInfo = new() {
             FileName = "clang",
             Arguments = args
@@ -34,5 +34,29 @@ public class Assembler {
             return false;
         }
         return true;
+    }
+
+    public void ShowMetrics(string path)
+    {
+        // headers
+        Console.WriteLine("-=-=-=-=-=-=-=-=- HEADERS (READELF) -=-=-=-=-=-=-=-=-");
+        ProcessStartInfo objdumpInfo = new() {
+            FileName = "llvm-readelf",
+            Arguments = $"\"{path}\" -header",
+        };
+        Process? readElfProc = Process.Start(objdumpInfo);
+        if (readElfProc is not null) {
+            readElfProc.WaitForExit();
+        }
+            
+        Console.WriteLine("-=-=-=-=-=-=-=-=- DISASM (OBJDUMP) -=-=-=-=-=-=-=-=-");
+        ProcessStartInfo objdumpDisasmInfo = new() {
+            FileName = "llvm-objdump",
+            Arguments = $"\"{path}\" -d",
+        };
+        Process? objdumpProc = Process.Start(objdumpDisasmInfo);
+        if (objdumpProc is not null) {
+            objdumpProc.WaitForExit();
+        }
     }
 }

@@ -237,7 +237,7 @@ public class MipsGenerator
 
         switch (loadptr.Dest.AddressType) {
             case ILAddressType.Temporary:
-                sw.WriteLine($"\taddi {registerAllocator.GetRegister(loadptr.Dest)}, {temp}, 0 // carrega endereco de {loadptr.Src.Name} em {loadptr.Dest}");
+                sw.WriteLine($"\taddi {registerAllocator.GetRegister(loadptr.Dest)}, {temp}, 0 // armazena endereco de {loadptr.Src.Name} em {loadptr.Dest}");
                 break;
             case ILAddressType.Global:
                 // e depois copia o valor do ponteiro para a variavel global
@@ -601,7 +601,7 @@ public class MipsGenerator
                 sw.WriteLine($"\tadd $a0, {registerAllocator.GetRegister(write.Src)}, $zero // move valor de {write.Src} para $a0 para syscall");
                 break;
             case ILAddressType.Global:
-                sw.WriteLine($"\tlw $a0, {write.Src.Label} // carrega valor de {write.Src.Name} em $a0");
+                sw.WriteLine($"\tla $a0, {write.Src.Label} // carrega endereco base de {write.Src.Name} em $a0");
                 break;
             case ILAddressType.Stack:
                 // stack
