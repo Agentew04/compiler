@@ -1,16 +1,17 @@
-﻿Funcao main Recebe Nada e Retorna Nada
-    int a := 5;
-    int b := 10;
-    int c := a+b;
+﻿Funcao main Recebe Nada e Retorna int
+    int a := fibonacci(1);
+    Retorna a;
 Fim Funcao
 
 Funcao fibonacci Recebe int n e Retorna int
-    Se n == 1 || n == 2 Entao
-        Retorna 1;
-    Fim Se
-    int nMenos1 := n - 1;
-    int nMenos2 := n - 2;
-    int a := fibonacci(nMenos1);
-    int b := fibonacci(nMenos2);
-    Retorna a+b;
+    int j := 1;
+    int i := 0;
+    int k := 1;
+    Enquanto k < n Faca
+        int t := i + j;
+        i := j;
+        j := t;
+        k := k + 1;
+    Fim Enquanto
+    Retorna i;
 Fim Funcao

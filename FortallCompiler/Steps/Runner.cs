@@ -23,6 +23,8 @@ public class Runner {
         machine.LoadElf(elf);
 
         Stopwatch sw = new();
+        machine.Registers[RegisterFile.Register.Pc] = 0x0040_0000;
+        machine.Cpu.UseBranchDelaySlot = false;
         sw.Start();
         ulong clocks = 0;
         while (!machine.IsClockingFinished()) {
@@ -31,11 +33,24 @@ public class Runner {
         }
         sw.Stop();
 
-        Console.WriteLine("Valor de T0: " + machine.Registers.Get(RegisterFile.Register.T0));
+        Console.WriteLine("Valor de saida: " + machine.Cpu.ExitCode);
+        double frequency = clocks / sw.Elapsed.TotalSeconds;
+        string frequencyUnit = "Hz";
+        if (frequency > 1_000) {
+            frequencyUnit = "kHz";
+            frequency /= 1_000;
+        }else if(frequency > 1_000_000) {
+            frequencyUnit = "MHz";
+            frequency /= 1_000_000;
+        }else if (frequency > 1_000_000_000) {
+            frequencyUnit = "GHz";
+            frequency /= 1_000_000_000;
+        }
 
         Console.WriteLine("-=-=- Estatisticas -=-=-");
         Console.WriteLine($"Duracao total: {sw.Elapsed}" );
         Console.WriteLine($"Clocks: {clocks}");
         Console.WriteLine($"Tempo medio por clock: {sw.Elapsed/clocks}");
+        Console.WriteLine($"Frequencia: {frequency:F2}{frequencyUnit}");
     }
 }

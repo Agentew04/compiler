@@ -161,8 +161,10 @@ public static class Program
         try {
             mipsGenerator.Generate(ilProgram, ms);
         }
-        catch (Exception) {
+        catch (Exception e) {
             // erro, printa o resto
+            Console.WriteLine(e.Message);
+            Console.WriteLine(e.StackTrace);
             return false;
         }
 
