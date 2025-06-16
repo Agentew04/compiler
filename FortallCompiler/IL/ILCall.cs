@@ -14,5 +14,5 @@ public class ILCall : ILInstruction
     }
     
     public override string ToString() => 
-        $"{(Dest != null ? $"{Dest} = " : "")}{FunctionName}({string.Join(", ", Arguments)})";
+        $"Call {(Dest != null ? $"{Dest} = " : "")}{FunctionName}({string.Join(", ", Arguments)})";
 }

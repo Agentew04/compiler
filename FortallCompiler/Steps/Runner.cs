@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using ELFSharp.ELF;
 using SAAE.Engine.Mips.Runtime;
+using SAAE.Engine.Mips.Runtime.Simple;
 using Machine = SAAE.Engine.Mips.Runtime.Machine;
 
 namespace FortallCompiler.Steps;
@@ -22,11 +23,25 @@ public class Runner {
         
         machine.LoadElf(elf);
         machine.Registers[RegisterFile.Register.Pc] = 0x0040_0000;
-        machine.Cpu.UseBranchDelaySlot = false;
+        machine.Cpu.OnSignalException += (sender, args) =>
+        {
+            if (args.Signal == Monocycle.SignalExceptionEventArgs.SignalType.Breakpoint)
+            {
+                Console.WriteLine("BREAKPOINT HIT");
+                if (!Debugger.IsAttached)
+                {
+                    Debugger.Launch();
+                }
+                Debugger.Break();
+            }
+        };
 
         Console.WriteLine("-=-=- MAQUINA -=-=-");
+        Console.WriteLine("CPU: " + machine.Cpu.GetType().Name);
         Console.WriteLine("OS: " + machine.Os.FriendlyName);
         Console.WriteLine("Architecture: " + machine.Os.CompatibleArchitecture);
+        Console.WriteLine("Memory Size: " + machine.Memory.Size/ (1024 * 1024) + "MB");
+        Console.WriteLine("Memory Type: " + machine.Memory.GetType().Name);
         Console.WriteLine("-=-=- EXECUCAO -=-=-");
 
         Stopwatch sw = new();
@@ -38,6 +53,7 @@ public class Runner {
         }
         sw.Stop();
 
+        Console.WriteLine("-=-=- FIM EXECUCAO -=-=-");
         Console.WriteLine("Valor de saida: " + machine.Cpu.ExitCode);
         double frequency = clocks / sw.Elapsed.TotalSeconds;
         string frequencyUnit = "Hz";

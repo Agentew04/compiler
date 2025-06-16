@@ -14,5 +14,5 @@ public class ILUnaryOp : ILInstruction
         Operand = operand;
     }
 
-    public override string ToString() => $"{Dest} = {Op} {Operand}";
+    public override string ToString() => $"unaryop {Dest} = {Op} {Operand}";
 }

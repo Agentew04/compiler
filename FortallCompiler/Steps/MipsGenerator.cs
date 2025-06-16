@@ -14,6 +14,7 @@ public class MipsGenerator
         this.program = program;
         using StreamWriter sw = new(outputStream, leaveOpen: true);
         // write globals
+        sw.WriteLine(".set noreorder");
         sw.WriteLine(".globl __start");
         sw.WriteLine(".data");
         foreach (ILGlobalVariable global in program.Globals)
@@ -44,6 +45,7 @@ public class MipsGenerator
         
         sw.WriteLine(".text");
         sw.WriteLine($"j {program.MainLabel}");
+        sw.WriteLine("nop");
         sw.WriteLine();
         
         // agora emite para cada funcao
@@ -170,6 +172,7 @@ public class MipsGenerator
         }
         if (function.Name == "main") {
             sw.WriteLine("\tj __program_end");
+            sw.WriteLine("\tnop");
         }
         sw.WriteLine();
     }
@@ -217,6 +220,7 @@ public class MipsGenerator
         else {
             // volta pra funcao anterior
             sw.WriteLine("\tjr $ra // retorna");
+            sw.WriteLine("\tnop");
         }
     }
     
@@ -381,6 +385,7 @@ public class MipsGenerator
         }
         string reg = registerAllocator.GetRegister(ifGoto.Condition);
         sw.WriteLine($"\tbnez {reg}, {ifGoto.Label} // se {ifGoto.Condition} for diferente de zero, pula para {ifGoto.Label}");
+        sw.WriteLine("\tnop // branch delay slot");
     }
     
     private void Generate(ILLabel label, StreamWriter sw, StackAllocator stackAllocator,
@@ -394,6 +399,7 @@ public class MipsGenerator
     {
         // j
         sw.WriteLine($"\tj {goTo.Label} // pula para {goTo.Label}");
+        sw.WriteLine("\tnop");
     }
 
     private void Generate(ILCall call, StreamWriter sw, StackAllocator stackAllocator,
@@ -441,6 +447,7 @@ public class MipsGenerator
             funcLabel = func.Label;
         }
         sw.WriteLine($"\tjal {funcLabel} // chama funcao {call.FunctionName}");
+        sw.WriteLine("\tnop");
         // agora restaura os temporarios
         sw.WriteLine("\t// RESTAURA TEMPORARIOS");
         for (int i = used.Count - 1; i >= 0; i--)
@@ -525,7 +532,9 @@ public class MipsGenerator
                 sw.WriteLine($"\tmul {temp}, {leftReg}, {rightReg} // multiplica {binaryOp.Left} e {binaryOp.Right}");
                 break;
             case BinaryOperationType.Division:
-                sw.WriteLine($"\tdiv {temp}, {leftReg}, {rightReg} // divide {binaryOp.Left} por {binaryOp.Right}");
+                sw.WriteLine($"\tdiv {leftReg}, {rightReg} // divide {binaryOp.Left} por {binaryOp.Right}");
+                sw.WriteLine("\tnop");
+                sw.WriteLine($"\tmflo {temp} // move resultado da divisao para {temp} (resultado de {binaryOp.Left} / {binaryOp.Right})");
                 break;
             case BinaryOperationType.Equals:
                 sw.WriteLine($"\tseq {temp}, {leftReg}, {rightReg} // compara {binaryOp.Left} == {binaryOp.Right}");

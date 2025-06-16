@@ -15,5 +15,5 @@ public class ILBinaryOp : ILInstruction
         Right = right;
     }
     
-    public override string ToString() => $"{Dest} = {Left} {Op.ToString().ToLower()} {Right}";
+    public override string ToString() => $"binaryOp {Dest} <= {Left} {Op.ToString().ToLower()} {Right}";
 }

@@ -1,19 +1,117 @@
 ﻿Funcao main Recebe Nada e Retorna int
-    int a := fibonacci(2);
+    int max := 10000;
+    int i := 0;
+    Enquanto i < max Faca
+        i := i + 1;
+    Fim Enquanto
+Fim Funcao
+/*Funcao main Recebe Nada e Retorna int
+    // TESTE PRINT
+    Escrever "Teste de print\n";
+    Escrever 152;
+    Escrever "\n";
+    Escrever true;
+    Escrever "\n";
+    
+    // TESTE VARIAVEIS E EXPRESSOES
+    int a := 10;
+    Escrever "Teste declaracao. Espero 10. Consegui: ";
     Escrever a;
     Escrever "\n";
-    Retorna a;
+    a := 20;
+    Escrever "Teste assignment. Espero 20. Consegui: ";
+    Escrever a;
+    Escrever "\n";
+    int b := (a + 5) * 2;
+    Escrever "Teste soma, multiplicacao, precedencia. Espero 50. Consegui: ";
+    Escrever b;
+    Escrever "\n";
+    b := 30 / 10;
+    Escrever "Teste divisao. Espero 3. Consegui: ";
+    Escrever b;
+    Escrever "\n";
+    bool b1 := true;
+    bool b2 := false;
+    Escrever "Teste bool (or and not). Espero true, false, true. Consegui: ";
+    Escrever b1 || b2;
+    Escrever ", ";
+    Escrever b1 && b2;
+    Escrever " e ";
+    Escrever !b2;
+    Escrever "\n";
+    
+    // TESTE IF
+    Escrever "Teste if. Espero executar. Executei? ";
+    Se a > 15 Entao
+        Escrever "Sim\n";
+    Fim Se
+    
+    Escrever "Teste if. Espero nao executar: \n";
+    Se a < 15 Entao
+        Escrever "Executei\n";
+    Fim Se
+    
+    int ifTest := 1;
+    Escrever "Teste if else. Espero executar Entao. Executei: ";
+    Se ifTest > 0 Entao
+        Escrever "Entao\n";
+    Senao
+        Escrever "Senao\n";
+    Fim Se
+    
+    ifTest := -1;
+    Escrever "Teste if else. Espero executar Senao. Executei: ";
+    Se ifTest > 0 Entao
+        Escrever "Entao\n";
+    Senao
+        Escrever "Senao\n";
+    Fim Se
+    
+    // TESTE WHILE
+    int i := 0;
+    Escrever "Teste while. Espero executar 5 vezes. Executei: ";
+    Enquanto i < 5 Faca
+        i := i + 1;
+        Fim Enquanto
+    Escrever i;
+    Escrever "\n";
+    
+    // TESTE CHAMADA FUNCAO
+    Escrever "Teste chamada funcao sem retorno sem parametro. Espero executar. Executei? ";
+    testeExec();
+    
+    Escrever "Teste chamada funcao sem retorno com parametro. Espero 5. Consegui: ";
+    str testStr := "5\n";
+    printa(testStr);
+    
+    Escrever "Teste chamada funcao com retorno. Espero 5. Consegui: ";
+    int resultado := soma(2, 3);
+    Escrever resultado;
+    Escrever "\n";
+    
+    Escrever "Teste recursao. Espero 720. Consegui: ";
+    int fatorialResultado := fatorial(6);
+    Escrever fatorialResultado; 
+    Escrever "\n";
 Fim Funcao
 
-Funcao fibonacci Recebe int n e Retorna int
-    int j := 1;
-    int i := 0;
-    int k := 1;
-    Enquanto k < n Faca
-        int t := i + j;
-        i := j;
-        j := t;
-        k := k + 1;
-    Fim Enquanto
-    Retorna i;
+Funcao testeExec Recebe Nada e Retorna Nada
+    Escrever "Executei\n";
 Fim Funcao
+
+Funcao printa Recebe str a e Retorna Nada
+    Escrever a;
+Fim Funcao
+
+Funcao soma Recebe int a, int b e Retorna int
+    int c := a + b;
+    Retorna c;
+Fim Funcao
+
+Funcao fatorial Recebe int n e Retorna int
+    Se n <= 1 Entao
+        Retorna 1;
+    Senao
+        Retorna n * fatorial(n - 1);
+    Fim Se
+Fim Funcao*/

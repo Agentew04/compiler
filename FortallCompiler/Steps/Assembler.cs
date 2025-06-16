@@ -31,8 +31,10 @@ public class Assembler {
         process.WaitForExit();
 
         if (process.ExitCode != 0) {
+            process.Close();
             return false;
         }
+        process.Close();
         return true;
     }
 

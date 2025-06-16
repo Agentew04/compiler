@@ -10,5 +10,5 @@ public class ILMove : ILInstruction
         Src = src;
     }
     
-    public override string ToString() => $"{Dest} = {Src}";
+    public override string ToString() => $"move {Dest} = {Src}";
 }
