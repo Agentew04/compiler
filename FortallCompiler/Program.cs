@@ -46,29 +46,27 @@ public static class Program
             return;
         }
         
-        string ilPath = Path.ChangeExtension(path, ".il");
+        string ilPath = Path.ChangeExtension(path, ".fil");
         FileStream ilFs = File.Open(ilPath, FileMode.OpenOrCreate, FileAccess.Write);
         IlGeneration(ast!, sw, ref totalTime, ilFs, out ILProgram ilProgram);
         ilFs.Close();
-        
-        string asmPath = Path.ChangeExtension(path, ".s");
-        FileStream asmFs = File.Open(asmPath, FileMode.OpenOrCreate, FileAccess.Write);
-        if (!AssemblyGeneration(ilProgram, sw, ref totalTime, asmFs)) {
-            return;            
-        }
-        asmFs.Dispose();
 
-        if (!Assemble(asmPath, sw, ref totalTime, out string outputPath)) {
-            Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
-            return;            
+        Console.WriteLine("Qual plataforma de destino?");
+        Console.WriteLine("\t1. MIPS");
+        Console.WriteLine("\t2. .NET IL");
+        string targetFrameworkInput = Console.ReadLine() ?? "";
+        if(!int.TryParse(targetFrameworkInput, out int targetFramework) || targetFramework < 1 || targetFramework > 2) {
+            Console.WriteLine("Plataforma invalida, abortando...");
+            return;
         }
 
-        Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
-        sw.Stop();
-        Console.WriteLine("Executar? (S/N)");
-        string input = Console.ReadLine() ?? "S";
-        if (input is "S" or "s") {
-            Run(outputPath);
+        if (targetFramework == 1) {
+            // MIPS
+            MipsFlow(path, ilProgram, sw, ref totalTime);
+        }
+        else if(targetFramework == 2) {
+            // .NET IL
+            DotnetFlow(path, ilProgram, sw, ref totalTime);
         }
     }
 
@@ -151,8 +149,30 @@ public static class Program
         Console.WriteLine($"Escrito codigo intermediario no disco em {sw.Elapsed.TotalMilliseconds}ms!");
         Console.WriteLine();
     }
+
+    private static void MipsFlow(string path, ILProgram ilProgram, Stopwatch sw, ref double totalTime) {
+        string asmPath = Path.ChangeExtension(path, ".s");
+        FileStream asmFs = File.Open(asmPath, FileMode.OpenOrCreate, FileAccess.Write);
+        if (!MipsAssemblyGeneration(ilProgram, sw, ref totalTime, asmFs)) {
+            return;            
+        }
+        asmFs.Dispose();
+
+        if (!MipsAssemble(asmPath, sw, ref totalTime, out string outputPath)) {
+            Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
+            return;            
+        }
+
+        sw.Stop();
+        Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
+        Console.WriteLine("Executar? (S/N)");
+        string input = Console.ReadLine() ?? "S";
+        if (input is "S" or "s") {
+            MipsRun(outputPath);
+        }
+    }
     
-    private static bool AssemblyGeneration(ILProgram ilProgram, Stopwatch sw, ref double totalTime, Stream outputStream)
+    private static bool MipsAssemblyGeneration(ILProgram ilProgram, Stopwatch sw, ref double totalTime, Stream outputStream)
     {
         using MemoryStream ms = new();
         Console.WriteLine("Traduzindo codigo intermediario assembly MIPS...");
@@ -185,12 +205,12 @@ public static class Program
         return true;
     }
 
-    private static bool Assemble(string path, Stopwatch sw, ref double totalTime, out string outputPath)
+    private static bool MipsAssemble(string path, Stopwatch sw, ref double totalTime, out string outputPath)
     {
         Console.WriteLine("Comecando a montagem com ferramenta externa...");
-        Assembler assembler = new();
+        MipsAssembler mipsAssembler = new();
         sw.Restart();
-        bool success = assembler.Compile(path, out outputPath);
+        bool success = mipsAssembler.Compile(path, out outputPath);
         sw.Stop();
         totalTime += sw.Elapsed.TotalMilliseconds;
         if (!success)
@@ -204,14 +224,96 @@ public static class Program
         Console.WriteLine("Deseja ver os headers do ELF e o DISSASSEMBLY? (S/N)");
         string? input = Console.ReadLine();
         if (input is not null && input.ToUpper() == "S") {
-            assembler.ShowMetrics(outputPath);
+            mipsAssembler.ShowMetrics(outputPath);
         }
         Console.WriteLine();
         return true;
     }
-
-    private static void Run(string path) {
+    
+    private static void MipsRun(string path) {
         Runner runner = new();
         runner.Run(path);
+    }
+    
+    private static void DotnetFlow(string path, ILProgram ilProgram, Stopwatch sw, ref double totalTime) {
+        string ilPath = Path.ChangeExtension(path, ".il");
+        FileStream ilFs = File.Open(ilPath, FileMode.OpenOrCreate, FileAccess.Write);
+        if (!DotnetGeneration(ilProgram, sw, ref totalTime, ilFs)) {
+            ilFs.Dispose();
+            return;
+        }
+        ilFs.Dispose();
+
+        if (!DotnetAssemble(ilPath, sw, ref totalTime, out string outputPath)) {
+            return;
+        }
+        
+        sw.Stop();
+        Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
+        Console.WriteLine("Executar? (S/N)");
+        string input = Console.ReadLine() ?? "S";
+        if (input is "S" or "s") {
+            DotnetRun(outputPath);
+        }
+    }
+
+    private static bool DotnetGeneration(ILProgram ilProgram, Stopwatch sw, ref double totalTime, Stream outputStream) {
+        using MemoryStream ms = new();
+        Console.WriteLine("Traduzindo codigo intermediario para .NET IL...");
+        DotnetGenerator generator = new();
+        sw.Restart();
+        try {
+            generator.Generate(ilProgram, ms);
+        }
+        catch (Exception e) {
+            // erro, printa o resto
+            Console.WriteLine(e.Message);
+            Console.WriteLine(e.StackTrace);
+            return false;
+        }
+
+        sw.Stop();
+        totalTime += sw.Elapsed.TotalMilliseconds;
+        Console.WriteLine($"Traducao para .NET IL bem sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
+        
+        Console.WriteLine("Escrevendo .NET IL no disco...");
+        sw.Restart();
+        ms.Seek(0, SeekOrigin.Begin);
+        ms.CopyTo(outputStream);
+        outputStream.Flush();
+        outputStream.SetLength(outputStream.Position);
+        sw.Stop();
+        totalTime += sw.Elapsed.TotalMilliseconds;
+        Console.WriteLine($"Escrito .NET IL no disco em {sw.Elapsed.TotalMilliseconds}ms!");
+        Console.WriteLine();
+        return true;
+    }
+
+    private static bool DotnetAssemble(string ilPath, Stopwatch sw, ref double totalTime, out string outputPath) {
+        Console.WriteLine("Comecando a montagem com ILASM...");
+        DotnetAssembler assembler = new();
+        sw.Restart();
+        bool success = assembler.Compile(ilPath, out outputPath);
+        sw.Stop();
+        totalTime += sw.Elapsed.TotalMilliseconds;
+        if (!success)
+        {
+            Console.WriteLine("Ocorreu um erro na montagem :(");
+            return false;
+        }
+
+        Console.WriteLine($"Montagem para .NET DLL sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
+        return true;
+    }
+    
+    
+    
+    private static void DotnetRun(string path) {
+        ProcessStartInfo executeStartInfo = new() {
+            FileName = path,
+        };
+        Console.WriteLine($"Executando {path}");
+        Process? executeProc = Process.Start(executeStartInfo);
+        executeProc?.WaitForExit();
     }
 }

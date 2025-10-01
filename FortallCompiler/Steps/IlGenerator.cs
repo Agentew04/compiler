@@ -51,8 +51,9 @@ public class IlGenerator {
 
     private ILFunction GenerateFunction(FunctionNode function)
     {
-        List<string> parameters = [];
-        parameters.AddRange(function.Parameters.Select(param => param.Name));
+        List<ILParameter> parameters = [];
+        parameters.AddRange(
+            function.Parameters.Select(param => new ILParameter(param.Name, param.ParameterType)));
         ILFunction ilFunction = new(function.Name, parameters);
         List<ILInstruction> instructions = [];
         ilFunction.Instructions = instructions;

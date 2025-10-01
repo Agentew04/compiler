@@ -3,11 +3,11 @@
 public class ILFunction
 {
     public string Name;
-    public List<string> Parameters;
+    public List<ILParameter> Parameters;
     public List<ILInstruction> Instructions;
     public string Label = "";
     
-    public ILFunction(string name, List<string> parameters)
+    public ILFunction(string name, List<ILParameter> parameters)
     {
         Name = name;
         Parameters = parameters;

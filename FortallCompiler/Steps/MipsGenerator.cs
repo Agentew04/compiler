@@ -61,9 +61,9 @@ public class MipsGenerator
     {
         StringBuilder paramSb = new();
         int i = 0;
-        foreach (string param in function.Parameters)
+        foreach (ILParameter param in function.Parameters)
         {
-            paramSb.Append($"\n//   {param}: a{i}");
+            paramSb.Append($"\n//   {param.Name}: a{i} ({param.Type})");
             i++;
         }
         sw.WriteLine($"""
@@ -86,18 +86,18 @@ public class MipsGenerator
         }
         sw.WriteLine("\t// Mapa de offsets de variaveis:");
         // aloca todos os parametros
-        foreach (string param in function.Parameters)
+        foreach (ILParameter param in function.Parameters)
         {
-            stackAllocator.AllocateVariable(param);
+            stackAllocator.AllocateVariable(param.Name);
         }
         // alloca todas variaveis
         foreach (ILVar varDecl in function.Instructions.OfType<ILVar>())
         {
             stackAllocator.AllocateVariable(varDecl.Name);
         }
-        foreach (string param in function.Parameters)
+        foreach (ILParameter param in function.Parameters)
         {
-            sw.WriteLine($"\t//   {param} -> $sp+{stackAllocator.GetVariableOffset(param)}");
+            sw.WriteLine($"\t//   {param} -> $sp+{stackAllocator.GetVariableOffset(param.Name)}");
         }
         foreach (ILVar varDecl in function.Instructions.OfType<ILVar>())
         {
@@ -124,7 +124,7 @@ public class MipsGenerator
 
         // salva parametros no stack
         for (i = 0; i < function.Parameters.Count; i++) {
-            sw.WriteLine($"\tsw $a{i}, {stackAllocator.GetVariableOffset(function.Parameters[i])}($sp) // salva argumento {function.Parameters[i]} na pilha");
+            sw.WriteLine($"\tsw $a{i}, {stackAllocator.GetVariableOffset(function.Parameters[i].Name)}($sp) // salva argumento {function.Parameters[i]} na pilha");
         }
 
         sw.WriteLine("\t// CORPO");

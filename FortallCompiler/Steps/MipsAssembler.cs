@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace FortallCompiler.Steps;
 
-public class Assembler {
+public class MipsAssembler {
     
     public bool Compile(string path, out string outputPath) {
         string tempPath = Path.GetTempPath();
