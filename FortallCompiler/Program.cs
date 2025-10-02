@@ -53,20 +53,33 @@ public static class Program
 
         Console.WriteLine("Qual plataforma de destino?");
         Console.WriteLine("\t1. MIPS");
-        Console.WriteLine("\t2. .NET IL");
+        Console.WriteLine("\t2. .NET");
+        Console.WriteLine("\t3. Nativo");
+        Console.WriteLine("\t4. JVM");
+        Console.WriteLine("\t5. WASM (Browser)");
+        Console.WriteLine("\t6. WASM (Desktop)");
+        
         string targetFrameworkInput = Console.ReadLine() ?? "";
-        if(!int.TryParse(targetFrameworkInput, out int targetFramework) || targetFramework < 1 || targetFramework > 2) {
+        if(!int.TryParse(targetFrameworkInput, out int targetFrameworkInt) || targetFrameworkInt < 1 || targetFrameworkInt > 6) {
             Console.WriteLine("Plataforma invalida, abortando...");
             return;
         }
+        Target target = (Target)(targetFrameworkInt+1);
 
-        if (targetFramework == 1) {
-            // MIPS
+        if (target == Target.Mips) {
             MipsFlow(path, ilProgram, sw, ref totalTime);
+            return;
         }
-        else if(targetFramework == 2) {
-            // .NET IL
-            DotnetFlow(path, ilProgram, sw, ref totalTime);
+
+        if (target == Target.Jvm) {
+            //JavaFlow(path, ilProgram, sw, ref totalTime);
+            Console.WriteLine("JVM ainda nao implementado, abortando...");
+            return;
+        }
+        
+        if(target is Target.DotNet or Target.Native or Target.WasmBrowser or Target.WasmDesktop) {
+            DotnetFlow(path, ilProgram, sw, ref totalTime, target);
+            return;
         }
     }
 
@@ -235,36 +248,46 @@ public static class Program
         runner.Run(path);
     }
     
-    private static void DotnetFlow(string path, ILProgram ilProgram, Stopwatch sw, ref double totalTime) {
+    private static void DotnetFlow(string path, ILProgram ilProgram, Stopwatch sw, ref double totalTime,
+        Target target) {
         string ilPath = Path.ChangeExtension(path, ".il");
         string name = Path.GetFileNameWithoutExtension(path);
         FileStream ilFs = File.Open(ilPath, FileMode.OpenOrCreate, FileAccess.Write);
-        if (!DotnetGeneration(ilProgram, sw, ref totalTime, ilFs, name)) {
+        bool createExe = target is Target.DotNet;
+        if (!DotnetGeneration(ilProgram, sw, ref totalTime, ilFs, name, createExe)) {
             ilFs.Dispose();
             return;
         }
         ilFs.Dispose();
 
-        if (!DotnetAssemble(ilPath, sw, ref totalTime, out string outputPath, name)) {
+        if (!DotnetAssemble(ilPath, sw, ref totalTime, out string outputPath, name, createExe)) {
             return;
         }
-        
-        sw.Stop();
-        Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
-        Console.WriteLine("Executar? (S/N)");
-        string input = Console.ReadLine() ?? "S";
-        if (input is "S" or "s") {
-            DotnetRun(outputPath);
+
+        if (target is Target.DotNet) {
+            sw.Stop();
+            Console.WriteLine("Tempo total de execucao: " + totalTime + "ms");
+            Console.WriteLine("Executar? (S/N)");
+            string input = Console.ReadLine() ?? "S";
+            if (input is "S" or "s") {
+                DotnetRun(outputPath);
+            }
+            return;
+        }
+
+        if (!DotnetNativeFlow(outputPath, sw, ref totalTime, target)) {
+            // debug message written inside DotnetNativeFlow
+            return;
         }
     }
 
-    private static bool DotnetGeneration(ILProgram ilProgram, Stopwatch sw, ref double totalTime, Stream outputStream, string name) {
+    private static bool DotnetGeneration(ILProgram ilProgram, Stopwatch sw, ref double totalTime, Stream outputStream, string name, bool createExe) {
         using MemoryStream ms = new();
         Console.WriteLine("Traduzindo codigo intermediario para .NET IL...");
         DotnetGenerator generator = new();
         sw.Restart();
         try {
-            generator.Generate(ilProgram, ms, name);
+            generator.Generate(ilProgram, ms, name, createExe);
         }
         catch (Exception e) {
             // erro, printa o resto
@@ -290,11 +313,11 @@ public static class Program
         return true;
     }
 
-    private static bool DotnetAssemble(string ilPath, Stopwatch sw, ref double totalTime, out string outputPath, string name) {
+    private static bool DotnetAssemble(string ilPath, Stopwatch sw, ref double totalTime, out string outputPath, string name, bool createExe) {
         Console.WriteLine("Comecando a montagem com ILASM...");
         DotnetAssembler assembler = new();
         sw.Restart();
-        bool success = assembler.Assemble(ilPath, out outputPath, name);
+        bool success = assembler.Assemble(ilPath, out outputPath, name, createExe);
         sw.Stop();
         totalTime += sw.Elapsed.TotalMilliseconds;
         if (!success)
@@ -303,11 +326,9 @@ public static class Program
             return false;
         }
 
-        Console.WriteLine($"Montagem para .NET DLL sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
+        Console.WriteLine($"Montagem para .NET sucedida em {sw.Elapsed.TotalMilliseconds}ms!");
         return true;
     }
-    
-    
     
     private static void DotnetRun(string path) {
         ProcessStartInfo executeStartInfo = new() {
@@ -317,5 +338,9 @@ public static class Program
         Process? executeProc = Process.Start(executeStartInfo);
         executeProc?.WaitForExit();
         Console.WriteLine("Exit code: " + executeProc?.ExitCode);
+    }
+
+    private static bool DotnetNativeFlow(string dllPath, Stopwatch sw, ref double totalTime, string name, Target target) {
+        throw new NotImplementedException();
     }
 }

@@ -9,8 +9,9 @@ public class DotnetGenerator {
 
     private ILProgram program;
     private string projectName; 
+    private bool createExe;
     
-    public void Generate(ILProgram program, Stream outputStream, string name) {
+    public void Generate(ILProgram program, Stream outputStream, string name, bool createExe) {
         this.program = program;
         using StreamWriter sw = new(outputStream, leaveOpen: true);
         projectName = name;
@@ -23,7 +24,7 @@ public class DotnetGenerator {
         // sw.WriteLine(".assembly extern System.Console {}");
         // sw.WriteLine(".assembly extern mscorlib {}");
         sw.WriteLine($".assembly {projectName} {{}}");
-        sw.WriteLine($".module {projectName}.exe");
+        sw.WriteLine($".module {projectName}.{(createExe ? "exe" : "dll")}");
     }
 
     private void WriteClass(StreamWriter sw) {
@@ -34,7 +35,7 @@ public class DotnetGenerator {
         sw.WriteLine("  // Fields");
         foreach (ILGlobalVariable field in program.Globals) {
             sw.Write("  .field public static ");
-            sw.WriteLine(TypeToILType(field.Type));
+            sw.Write(TypeToILType(field.Type));
             sw.Write(" ");
             sw.WriteLine(field.Name);
         }
@@ -54,9 +55,9 @@ public class DotnetGenerator {
     private void WriteFunction(ILFunction function, StreamWriter sw) {
         sw.WriteLine($"  // Function {function.Name}");
         Type returnValue = function.ReturnType;
-        Console.WriteLine("Function return type: " + returnValue);
 
-        sw.Write($"  .method private hidebysig static {TypeToILType(returnValue)} '{function.Name}'(");
+        bool isMain = function.Name == "main";
+        sw.Write($"  .method {(isMain ? "public" : "private")} hidebysig static {TypeToILType(returnValue)} '{function.Name}'(");
         for(int i = 0; i < function.Parameters.Count; i++) {
             ILParameter param = function.Parameters[i];
             sw.WriteLine();
@@ -70,7 +71,7 @@ public class DotnetGenerator {
         }
         sw.WriteLine(") cil managed");
         sw.WriteLine("  {");
-        if(function.Name == "main") {
+        if(isMain) {
             sw.WriteLine("    .entrypoint");
         }
         sw.WriteLine("    .maxstack 8");
@@ -83,9 +84,6 @@ public class DotnetGenerator {
         foreach (ILAddress temporary in temporaries) {
             localsAllocator.Allocate(temporary);
         }
-
-        Console.WriteLine($"Allocated {temporaries.Count} temps");
-
         sw.Write(localsAllocator.GenerateLocalsText());
         
         sw.WriteLine();
@@ -103,7 +101,7 @@ public class DotnetGenerator {
                     Generate(@goto, sw);
                     break;
                 case ILIfGoto ifGoto:
-                    Generate(ifGoto, sw);
+                    Generate(ifGoto, sw, localsAllocator);
                     break;
                 case ILLabel label:
                     Generate(label, sw);
@@ -127,7 +125,7 @@ public class DotnetGenerator {
                     Generate(write, sw, localsAllocator);
                     break;
                 case ILUnaryOp unaryOp:
-                    Generate(unaryOp, sw);
+                    Generate(unaryOp, sw, localsAllocator);
                     break;
                 case ILVar var:
                     // No code generation needed for variable declaration
@@ -265,15 +263,23 @@ public class DotnetGenerator {
     }
 
     private void Generate(ILGoto @goto, StreamWriter sw) {
-        
+        sw.WriteLine($"    br.s {@goto.Label}");
     }
 
-    private void Generate(ILIfGoto ifGoto, StreamWriter sw) {
-        
+    private void Generate(ILIfGoto ifGoto, StreamWriter sw, LocalsAllocator allocator) {
+        // load condition
+        if (ifGoto.Condition.AddressType == ILAddressType.Global) {
+            sw.WriteLine($"    ldsfld bool {projectName}.Program::{ifGoto.Condition.Name}");
+        }
+        else {
+            sw.WriteLine($"    {LoadLocal(allocator.GetIndex(ifGoto.Condition))}");
+        }
+        // branch
+        sw.WriteLine($"    brtrue.s {ifGoto.Label}");
     }
 
     private void Generate(ILLabel label, StreamWriter sw) {
-        
+        sw.WriteLine($"    {label.Name}:");
     }
 
     private void Generate(ILLoad load, StreamWriter sw, LocalsAllocator allocator) {
@@ -378,8 +384,27 @@ public class DotnetGenerator {
         }
     }
     
-    private void Generate(ILUnaryOp unaryOp, StreamWriter sw) {
-        
+    private void Generate(ILUnaryOp unaryOp, StreamWriter sw, LocalsAllocator allocator) {
+        switch (unaryOp.Op) {
+            case UnaryOperationType.Not:
+                if (unaryOp.Dest.AddressType == ILAddressType.Global) {
+                    sw.WriteLine($"    ldsfld bool {projectName}.Program::{unaryOp.Operand.Name}");
+                }
+                else {
+                    sw.WriteLine($"    {LoadLocal(allocator.GetIndex(unaryOp.Operand))}");
+                }
+                sw.WriteLine("    ldc.i4.0");
+                sw.WriteLine("    ceq");
+                if (unaryOp.Dest.AddressType == ILAddressType.Global) {
+                    sw.WriteLine($"    stsfld bool {projectName}.Program::{unaryOp.Dest.Name}");
+                }
+                else {
+                    sw.WriteLine($"    {StoreLocal(allocator.GetIndex(unaryOp.Dest))}");
+                }
+                break;
+            default:
+                throw new NotSupportedException($"Unary op {unaryOp.Op} not supported");
+        }
     }
 
     #endregion
