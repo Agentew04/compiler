@@ -226,7 +226,7 @@ public class MipsGenerator
     
     private void Generate(ILLoadPtr loadptr, StreamWriter sw, StackAllocator stackAllocator, 
         RegisterAllocator registerAllocator) {
-        string temp = registerAllocator.AllocateRegister(new ILAddress("temporary", ILAddressType.Temporary));
+        string temp = registerAllocator.AllocateRegister(new ILAddress("temporary", ILAddressType.Temporary, Type.String));
         switch (loadptr.Src.AddressType) {
             case ILAddressType.Temporary:
                 throw new Exception("erro!. load ptr n pode ser usado com registradores.");
@@ -269,7 +269,7 @@ public class MipsGenerator
             value = (int)load.Value;
         }
 
-        string temp = registerAllocator.AllocateRegister(new ILAddress("temporary", ILAddressType.Temporary));
+        string temp = registerAllocator.AllocateRegister(new ILAddress("temporary", ILAddressType.Temporary, load.Dest.Type));
         
         switch (load.Dest.AddressType) {
             case ILAddressType.Temporary:
@@ -293,7 +293,7 @@ public class MipsGenerator
     private void Generate(ILUnaryOp unaryOp, StreamWriter sw, StackAllocator stackAllocator,
         RegisterAllocator registerAllocator)
     {
-        string temp = registerAllocator.AllocateRegister(new ILAddress("temporary", ILAddressType.Temporary));
+        string temp = registerAllocator.AllocateRegister(new ILAddress("temporary", ILAddressType.Temporary, Type.Void));
         switch (unaryOp.Operand.AddressType) {
             case ILAddressType.Temporary:
                 sw.WriteLine($"\tadd {temp}, {registerAllocator.GetRegister(unaryOp.Operand)}, $zero");
@@ -342,7 +342,7 @@ public class MipsGenerator
             return;
         }
 
-        string temp = registerAllocator.AllocateRegister(new ILAddress("temporary", ILAddressType.Temporary));
+        string temp = registerAllocator.AllocateRegister(new ILAddress("temporary", ILAddressType.Temporary, Type.Void));
         string dest = temp;
         switch (move.Src.AddressType) {
             case ILAddressType.Temporary:
@@ -480,7 +480,7 @@ public class MipsGenerator
 
     private void Generate(ILBinaryOp binaryOp, StreamWriter sw, StackAllocator stackAllocator,
         RegisterAllocator registerAllocator) {
-        string temp = registerAllocator.AllocateRegister(new ILAddress("temporary", ILAddressType.Temporary));
+        string temp = registerAllocator.AllocateRegister(new ILAddress("temporary", ILAddressType.Temporary, Type.Void));
         bool leftUsesTemp = true;
         string leftReg = temp;
         string rightReg = "";

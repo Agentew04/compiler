@@ -237,14 +237,15 @@ public static class Program
     
     private static void DotnetFlow(string path, ILProgram ilProgram, Stopwatch sw, ref double totalTime) {
         string ilPath = Path.ChangeExtension(path, ".il");
+        string name = Path.GetFileNameWithoutExtension(path);
         FileStream ilFs = File.Open(ilPath, FileMode.OpenOrCreate, FileAccess.Write);
-        if (!DotnetGeneration(ilProgram, sw, ref totalTime, ilFs)) {
+        if (!DotnetGeneration(ilProgram, sw, ref totalTime, ilFs, name)) {
             ilFs.Dispose();
             return;
         }
         ilFs.Dispose();
 
-        if (!DotnetAssemble(ilPath, sw, ref totalTime, out string outputPath)) {
+        if (!DotnetAssemble(ilPath, sw, ref totalTime, out string outputPath, name)) {
             return;
         }
         
@@ -257,13 +258,13 @@ public static class Program
         }
     }
 
-    private static bool DotnetGeneration(ILProgram ilProgram, Stopwatch sw, ref double totalTime, Stream outputStream) {
+    private static bool DotnetGeneration(ILProgram ilProgram, Stopwatch sw, ref double totalTime, Stream outputStream, string name) {
         using MemoryStream ms = new();
         Console.WriteLine("Traduzindo codigo intermediario para .NET IL...");
         DotnetGenerator generator = new();
         sw.Restart();
         try {
-            generator.Generate(ilProgram, ms);
+            generator.Generate(ilProgram, ms, name);
         }
         catch (Exception e) {
             // erro, printa o resto
@@ -289,11 +290,11 @@ public static class Program
         return true;
     }
 
-    private static bool DotnetAssemble(string ilPath, Stopwatch sw, ref double totalTime, out string outputPath) {
+    private static bool DotnetAssemble(string ilPath, Stopwatch sw, ref double totalTime, out string outputPath, string name) {
         Console.WriteLine("Comecando a montagem com ILASM...");
         DotnetAssembler assembler = new();
         sw.Restart();
-        bool success = assembler.Compile(ilPath, out outputPath);
+        bool success = assembler.Assemble(ilPath, out outputPath, name);
         sw.Stop();
         totalTime += sw.Elapsed.TotalMilliseconds;
         if (!success)
@@ -315,5 +316,6 @@ public static class Program
         Console.WriteLine($"Executando {path}");
         Process? executeProc = Process.Start(executeStartInfo);
         executeProc?.WaitForExit();
+        Console.WriteLine("Exit code: " + executeProc?.ExitCode);
     }
 }

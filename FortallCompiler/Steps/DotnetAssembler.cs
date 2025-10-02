@@ -3,7 +3,7 @@
 namespace FortallCompiler.Steps;
 
 public class DotnetAssembler {
-    public bool Compile(string ilPath, out string outputPath) {
+    public bool Assemble(string ilPath, out string outputPath, string name) {
         outputPath = Path.ChangeExtension(ilPath, ".exe");
         ProcessStartInfo ilasmProcInfo = new() {
             FileName = "ilasm.exe",
@@ -13,8 +13,9 @@ public class DotnetAssembler {
         ilasmProc.WaitForExit();
         
         // deps.json and runtimeconfig.json
-        File.WriteAllText(Path.ChangeExtension(outputPath, ".deps.json"), depsJson);
+        File.WriteAllText(Path.ChangeExtension(outputPath, ".deps.json"), depsJson.Replace("{NAME}", name));
         File.WriteAllText(Path.ChangeExtension(outputPath, ".runtimeconfig.json"), runtimeConfigJson);
+        
         
         if (ilasmProc.ExitCode == 0) return true;
         outputPath = string.Empty;
@@ -31,15 +32,15 @@ public class DotnetAssembler {
           "compilationOptions": {},
           "targets": {
             ".NETCoreApp,Version=v9.0": {
-              "FortallProgram/1.0.0": {
+              "{NAME}/1.0.0": {
                 "runtime": {
-                  "FortallProgram.dll": {}
+                  "{NAME}.exe": {}
                 }
               }
             }
           },
           "libraries": {
-            "FortallProgram/1.0.0": {
+            "{NAME}/1.0.0": {
               "type": "project",
               "serviceable": false,
               "sha512": ""

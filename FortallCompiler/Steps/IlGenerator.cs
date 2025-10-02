@@ -54,7 +54,7 @@ public class IlGenerator {
         List<ILParameter> parameters = [];
         parameters.AddRange(
             function.Parameters.Select(param => new ILParameter(param.Name, param.ParameterType)));
-        ILFunction ilFunction = new(function.Name, parameters);
+        ILFunction ilFunction = new(function.Name, parameters, function.ReturnType);
         List<ILInstruction> instructions = [];
         ilFunction.Instructions = instructions;
         string label = "__function_" + function.Name;
@@ -98,7 +98,7 @@ public class IlGenerator {
                 ILAddress ifCondTemp = Generate(ifStmt.Condition, instructions);
                 string elseLabel = $"{namespaceName}_else_{idx++}";
                 string endIfLabel = $"{namespaceName}_endif_{idx++}";
-                ILAddress notCondTemp = GetTemp();
+                ILAddress notCondTemp = GetTemp(Type.Boolean);
                 instructions.Add(new ILUnaryOp(notCondTemp, UnaryOperationType.Not, ifCondTemp));
                 ReleaseTemp(ifCondTemp);
                 instructions.Add(new ILIfGoto(notCondTemp, elseLabel));
@@ -128,7 +128,7 @@ public class IlGenerator {
                 instructions.Add(new ILLabel(startLabel));
                 
                 ILAddress whileCondTemp = Generate(whileStmt.Condition, instructions);
-                ILAddress whileNotCondTemp = GetTemp();
+                ILAddress whileNotCondTemp = GetTemp(Type.Boolean);
                 instructions.Add(new ILUnaryOp(whileNotCondTemp, UnaryOperationType.Not, whileCondTemp));
                 ReleaseTemp(whileCondTemp);
                 instructions.Add(new ILIfGoto(whileNotCondTemp, endLabel));
@@ -148,7 +148,7 @@ public class IlGenerator {
                     .Any(x => x.FieldName == assignStmt.VariableName)
                     ? ILAddressType.Global
                     : ILAddressType.Stack;
-                ILAddress addr = new ILAddress(assignStmt.VariableName, type);
+                ILAddress addr = new ILAddress(assignStmt.VariableName, type, assignStmt.AssignedValue.ExpressionType);
                 if (addr.AddressType == ILAddressType.Global) {
                     addr.Label = globalLabels[addr.Name];
                 }
@@ -169,13 +169,14 @@ public class IlGenerator {
                 ReleaseTemp(writeTemp);
                 break;
             case ReadNode readStmt:
-                instructions.Add(new ILRead(new ILAddress(readStmt.VariableName, ILAddressType.Stack), scopeData.GetVariable(readStmt.VariableName)!.Type));
+                Type readType = scopeData.GetVariable(readStmt.VariableName)!.Type;
+                instructions.Add(new ILRead(new ILAddress(readStmt.VariableName, ILAddressType.Stack, readType), readType));
                 break;
             case FunctionCallStatementNode funcCallStmt:
                 FunctionCallExpressionNode funcCall = funcCallStmt.FunctionCallExpression;
                 List<ILAddress> args = [];
                 args.AddRange(funcCall.Arguments.Select(arg => Generate(arg, instructions)));
-                ILAddress tCall = GetTemp();
+                ILAddress tCall = GetTemp(funcCall.ExpressionType);
                 instructions.Add(new ILCall(tCall, funcCall.FunctionName, args));
                 foreach (ILAddress arg in args)
                 {
@@ -193,11 +194,11 @@ public class IlGenerator {
                 ILAddress initValueTemp = Generate(varDecl.InitValue, instructions);
                 if (varDecl.InitValue.ExpressionType == Type.String)
                 {
-                    instructions.Add(new ILLoadPtr(new ILAddress(varDecl.VariableName, ILAddressType.Stack), initValueTemp));
+                    instructions.Add(new ILLoadPtr(new ILAddress(varDecl.VariableName, ILAddressType.Stack, Type.String), initValueTemp));
                 }
                 else
                 {
-                    instructions.Add(new ILMove(new ILAddress(varDecl.VariableName, ILAddressType.Stack), initValueTemp));
+                    instructions.Add(new ILMove(new ILAddress(varDecl.VariableName, ILAddressType.Stack, Type.String), initValueTemp));
                 }
                 ReleaseTemp(initValueTemp);
                 break;
@@ -210,13 +211,13 @@ public class IlGenerator {
             case LiteralExpressionNode lit:
                 if (lit.Type == Type.String)
                 {
-                    ILAddress straddr = new(lit.StringIdentifier!, ILAddressType.Global)
+                    ILAddress straddr = new(lit.StringIdentifier!, ILAddressType.Global, Type.String)
                     {
                         Label = lit.StringIdentifier!
                     };
                     return straddr;
                 }
-                ILAddress tLit = GetTemp();
+                ILAddress tLit = GetTemp(lit.Type);
                 instructions.Add(new ILLoad(tLit, lit.Value));
                 return tLit;
             case IdentifierExpressionNode identifier:
@@ -224,19 +225,19 @@ public class IlGenerator {
                     .Any(x => x.FieldName == identifier.Name)
                     ? ILAddressType.Global
                     : ILAddressType.Stack;
-                ILAddress addr = new ILAddress(identifier.Name, type);
+                ILAddress addr = new(identifier.Name, type, identifier.ExpressionType);
                 if (addr.AddressType == ILAddressType.Global) {
                     addr.Label = globalLabels[addr.Name];
                 }
                 return addr;
             case UnaryExpressionNode un:
-                ILAddress tUnary = GetTemp();
+                ILAddress tUnary = GetTemp(GetTypeFromOperation(un.Operation));
                 ILAddress operand = Generate(un.Operand, instructions);
                 instructions.Add(new ILUnaryOp(tUnary, un.Operation, operand));
                 ReleaseTemp(operand);
                 return tUnary;
             case BinaryExpressionNode bin:
-                ILAddress tBinary = GetTemp();
+                ILAddress tBinary = GetTemp(GetTypeFromOperation(bin.Operation));
                 ILAddress left = Generate(bin.Left, instructions);
                 ILAddress right = Generate(bin.Right, instructions);
                 instructions.Add(new ILBinaryOp(tBinary, left, bin.Operation, right));
@@ -246,7 +247,7 @@ public class IlGenerator {
             case FunctionCallExpressionNode call:
                 List<ILAddress> args = [];
                 args.AddRange(call.Arguments.Select(arg => Generate(arg, instructions)));
-                ILAddress tCall = GetTemp();
+                ILAddress tCall = GetTemp(call.ExpressionType);
                 instructions.Add(new ILCall(tCall, call.FunctionName, args));
                 foreach (ILAddress arg in args)
                 {
@@ -258,7 +259,7 @@ public class IlGenerator {
         }
     }
 
-    private ILAddress GetTemp()
+    private ILAddress GetTemp(Type temporaryType)
     {
         if (freeTemps.Count > 0)
         {
@@ -266,7 +267,7 @@ public class IlGenerator {
         }
         else
         {
-            return new ILAddress($"t{tempCounter++}", ILAddressType.Temporary);
+            return new ILAddress($"t{tempCounter++}", ILAddressType.Temporary, temporaryType);
         }
     }
     
@@ -277,5 +278,16 @@ public class IlGenerator {
             return;
         }
         freeTemps.Push(temp);
+    }
+
+    private Type GetTypeFromOperation(BinaryOperationType op) {
+        if (op <= BinaryOperationType.Division) {
+            return Type.Integer;
+        }
+        return Type.Boolean;
+    }
+    
+    private Type GetTypeFromOperation(UnaryOperationType op) {
+        return Type.Integer;
     }
 }

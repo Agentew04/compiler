@@ -6,10 +6,10 @@
         <LangVersion>latest</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <PublishAot>true</PublishAot>
-        <PublishReadyToRun>true</PublishReadyToRun>
-        <SelfContained>true</SelfContained>
-        <PublishSingleFile>true</PublishSingleFile>
+<!--        <PublishAot>true</PublishAot>-->
+<!--        <PublishReadyToRun>true</PublishReadyToRun>-->
+<!--        <SelfContained>true</SelfContained>-->
+<!--        <PublishSingleFile>true</PublishSingleFile>-->
     </PropertyGroup>
 
     <ItemGroup>

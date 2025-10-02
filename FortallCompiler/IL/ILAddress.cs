@@ -1,6 +1,8 @@
-﻿namespace FortallCompiler.IL;
+﻿using Type = FortallCompiler.Ast.Type;
 
-public class ILAddress : IComparable<ILAddress>
+namespace FortallCompiler.IL;
+
+public class ILAddress : IEquatable<ILAddress>
 {
     public string Name { get; }
     
@@ -8,20 +10,32 @@ public class ILAddress : IComparable<ILAddress>
     
     public string? Label { get; set; }
     
-    public ILAddress(string name, ILAddressType addressType)
+    public Type Type { get; }
+    
+    public ILAddress(string name, ILAddressType addressType, Type type)
     {
         Name = name;
         AddressType = addressType;
+        Type = type;
     }
 
     public override string ToString() => Name;
 
-    public int CompareTo(ILAddress? other) {
-        if (ReferenceEquals(this, other)) return 0;
-        if (other is null) return 1;
-        int nameComparison = string.Compare(Name, other.Name, StringComparison.Ordinal);
-        if (nameComparison != 0) return nameComparison;
-        return AddressType.CompareTo(other.AddressType);
+    public bool Equals(ILAddress? other) {
+        if (other is null) return false;
+        if (ReferenceEquals(this, other)) return true;
+        return Name == other.Name && AddressType == other.AddressType && Label == other.Label;
+    }
+
+    public override bool Equals(object? obj) {
+        if (obj is null) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals((ILAddress)obj);
+    }
+
+    public override int GetHashCode() {
+        return HashCode.Combine(Name, (int)AddressType, Label);
     }
 }
 
