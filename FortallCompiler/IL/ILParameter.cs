@@ -8,4 +8,6 @@ public class ILParameter {
         Name = name;
         Type = type;
     }
+
+    public override string ToString() => $"{Name}: {Type}";
 }

@@ -11,5 +11,5 @@ public class ILLoad : ILInstruction
         Value = value;
     }
 
-    public override string ToString() => $"load {Dest} = {Value}";
+    public override string ToString() => $"load {Dest} <= {Value}";
 }

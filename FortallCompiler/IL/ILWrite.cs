@@ -13,5 +13,5 @@ public class ILWrite : ILInstruction
         WriteType = writeType;
     }
 
-    public override string ToString() => $"write {WriteType} {Src}";
+    public override string ToString() => $"write<{WriteType}> {Src}";
 }

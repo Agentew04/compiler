@@ -64,7 +64,7 @@ public static class Program
             Console.WriteLine("Plataforma invalida, abortando...");
             return;
         }
-        Target target = (Target)(targetFrameworkInt+1);
+        Target target = (Target)(targetFrameworkInt-1);
 
         if (target == Target.Mips) {
             MipsFlow(path, ilProgram, sw, ref totalTime);
@@ -275,7 +275,7 @@ public static class Program
             return;
         }
 
-        if (!DotnetNativeFlow(outputPath, sw, ref totalTime, target)) {
+        if (!DotnetNativeFlow(outputPath, sw, ref totalTime, name, target)) {
             // debug message written inside DotnetNativeFlow
             return;
         }

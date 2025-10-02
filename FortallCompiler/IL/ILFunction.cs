@@ -1,4 +1,6 @@
-﻿namespace FortallCompiler.IL;
+﻿using System.Text;
+
+namespace FortallCompiler.IL;
 
 public class ILFunction
 {
@@ -14,5 +16,26 @@ public class ILFunction
         Parameters = parameters;
         Instructions = [];
         ReturnType = returnType;
+    }
+
+    public void ToString(StringBuilder sb) {
+        sb.Append($"func {Name}(");
+        if (Parameters.Count > 0) {
+            sb.Append(string.Join(", ", Parameters.Select(x => $"{x.Name}: {x.Type}")));
+        }
+        else {
+            sb.Append("Void");
+        }
+        sb.AppendLine($") -> {ReturnType} {{");
+        foreach (ILInstruction instruction in Instructions) {
+            sb.AppendLine($"    {instruction}");
+        }
+        sb.AppendLine("}");
+    }
+
+    public override string ToString() {
+        StringBuilder sb = new();
+        ToString(sb);
+        return sb.ToString();
     }
 }

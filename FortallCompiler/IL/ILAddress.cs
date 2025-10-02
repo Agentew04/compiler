@@ -42,5 +42,6 @@ public class ILAddress : IEquatable<ILAddress>
 public enum ILAddressType {
     Temporary,
     Global,
-    Stack
+    Stack,
+    Parameter
 }

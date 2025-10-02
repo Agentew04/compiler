@@ -11,5 +11,5 @@ public class ILLoadPtr : ILInstruction
         Src = src;
     }
     
-    public override string ToString() => $"loadptr {Dest} {Src}";
+    public override string ToString() => $"loadptr {Dest} <= &{Src}";
 }

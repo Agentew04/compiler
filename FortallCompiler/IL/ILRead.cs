@@ -13,5 +13,5 @@ public class ILRead : ILInstruction
         ReadType = readType;
     }
     
-    public override string ToString() => $"read {Dest}";
+    public override string ToString() => $"read<{ReadType}> {Dest}";
 }

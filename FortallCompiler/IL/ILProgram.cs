@@ -17,13 +17,8 @@ public class ILProgram
             sb.AppendLine(global.ToString());
         }
         sb.AppendLine();
-        foreach (ILFunction function in Functions)
-        {
-            sb.AppendLine($"# {function.Name}({string.Join(", ", function.Parameters)})");
-            foreach (ILInstruction instruction in function.Instructions)
-            {
-                sb.AppendLine("  " + instruction.ToString());
-            }
+        foreach (ILFunction function in Functions) {
+            function.ToString(sb);
             sb.AppendLine();
         }
         return sb.ToString();

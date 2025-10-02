@@ -8,5 +8,5 @@ public class ILGlobalVariable
     public Type Type;
     public object? Value;
 
-    public override string ToString() => $"global {Name} : {Type}" + (Value != null ? $" = {Value}" : "");
+    public override string ToString() => $"global {Name}: {Type}" + (Value != null ? $" = {Value}" : "");
 }

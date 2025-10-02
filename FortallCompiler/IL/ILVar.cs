@@ -13,5 +13,5 @@ public class ILVar : ILInstruction
         Type = type;
     }
     
-    public override string ToString() => $"var {Name} : {Type}";
+    public override string ToString() => $"var {Name}: {Type}";
 }

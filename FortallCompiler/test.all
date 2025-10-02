@@ -1,9 +1,9 @@
-﻿Funcao main Recebe Nada e Retorna int
-    int max := 10000;
-    int i := 0;
-    Enquanto i < max Faca
-        i := i + 1;
-    Fim Enquanto
+﻿Funcao main Recebe Nada e Retorna Nada
+    printa("a");
+Fim Funcao
+
+Funcao printa Recebe str a e Retorna Nada
+    Escrever a;
 Fim Funcao
 /*Funcao main Recebe Nada e Retorna int
     // TESTE PRINT
