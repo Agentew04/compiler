@@ -361,7 +361,7 @@ public class SemanticAnalyzer {
             }
             else if (stmt is ReturnStatementNode returnStmtNode)
             {
-                if (currentFunctionReturnType != Type.Void)
+                if (currentFunctionReturnType == Type.Void)
                 {
                     continue;
                 }

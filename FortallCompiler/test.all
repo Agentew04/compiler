@@ -1,11 +1,4 @@
 ﻿Funcao main Recebe Nada e Retorna Nada
-    printa("a");
-Fim Funcao
-
-Funcao printa Recebe str a e Retorna Nada
-    Escrever a;
-Fim Funcao
-/*Funcao main Recebe Nada e Retorna int
     // TESTE PRINT
     Escrever "Teste de print\n";
     Escrever 152;
@@ -114,4 +107,5 @@ Funcao fatorial Recebe int n e Retorna int
     Senao
         Retorna n * fatorial(n - 1);
     Fim Se
-Fim Funcao*/
+    Retorna 0;
+Fim Funcao

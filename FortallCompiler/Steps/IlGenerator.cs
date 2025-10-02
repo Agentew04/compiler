@@ -80,7 +80,7 @@ public class IlGenerator {
         return ilFunction;
     }
 
-    private void Generate(StatementNode statement, List<ILInstruction> instructions, string namespaceName, ref int idx, SemanticAnalyzer.ScopeData scopeData = null!)
+    private void Generate(StatementNode statement, List<ILInstruction> instructions, string namespaceName, ref int idx, SemanticAnalyzer.ScopeData scopeData)
     {
         switch (statement)
         {
@@ -107,7 +107,7 @@ public class IlGenerator {
                 int ifIdx = 0;
                 foreach (StatementNode s in ifStmt.ThenBlock.Statements)
                 {
-                    Generate(s, instructions, namespaceName + $"_if{idx-1}then", ref ifIdx);
+                    Generate(s, instructions, namespaceName + $"_if{idx-1}then", ref ifIdx, scopeData);
                 }
                 
                 instructions.Add(new ILGoto(endIfLabel));
@@ -116,7 +116,7 @@ public class IlGenerator {
                 {
                     foreach (StatementNode s in ifStmt.ElseBlock.Statements)
                     {
-                        Generate(s, instructions, namespaceName + $"_if{idx-1}else", ref ifIdx);
+                        Generate(s, instructions, namespaceName + $"_if{idx-1}else", ref ifIdx, scopeData);
                     }
                 }
                 instructions.Add(new ILLabel(endIfLabel));
@@ -205,7 +205,7 @@ public class IlGenerator {
         }
     }
 
-    private ILAddress Generate(ExpressionNode expression, List<ILInstruction> instructions, SemanticAnalyzer.ScopeData? scopeData = null) {
+    private ILAddress Generate(ExpressionNode expression, List<ILInstruction> instructions, SemanticAnalyzer.ScopeData scopeData) {
         switch (expression) {
             case LiteralExpressionNode lit:
                 if (lit.Type == Type.String)
@@ -236,21 +236,21 @@ public class IlGenerator {
                 return addr;
             case UnaryExpressionNode un:
                 ILAddress tUnary = GetTemp(GetTypeFromOperation(un.Operation));
-                ILAddress operand = Generate(un.Operand, instructions);
+                ILAddress operand = Generate(un.Operand, instructions, scopeData);
                 instructions.Add(new ILUnaryOp(tUnary, un.Operation, operand));
                 ReleaseTemp(operand);
                 return tUnary;
             case BinaryExpressionNode bin:
                 ILAddress tBinary = GetTemp(GetTypeFromOperation(bin.Operation));
-                ILAddress left = Generate(bin.Left, instructions);
-                ILAddress right = Generate(bin.Right, instructions);
+                ILAddress left = Generate(bin.Left, instructions, scopeData);
+                ILAddress right = Generate(bin.Right, instructions, scopeData);
                 instructions.Add(new ILBinaryOp(tBinary, left, bin.Operation, right));
                 ReleaseTemp(left);
                 ReleaseTemp(right);
                 return tBinary;
             case FunctionCallExpressionNode call:
                 List<ILAddress> args = [];
-                args.AddRange(call.Arguments.Select(arg => Generate(arg, instructions)));
+                args.AddRange(call.Arguments.Select(arg => Generate(arg, instructions, scopeData)));
                 ILAddress tCall = GetTemp(call.ExpressionType);
                 instructions.Add(new ILCall(tCall, call.FunctionName, args));
                 foreach (ILAddress arg in args)

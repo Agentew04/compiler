@@ -76,7 +76,7 @@ public class DotnetGenerator {
             ILParameter param = function.Parameters[i];
             sw.WriteLine();
             sw.Write("    ");
-            sw.WriteLine(TypeToILType(param.Type));
+            sw.Write(TypeToILType(param.Type));
             sw.Write(' ');
             sw.Write($"'{param.Name}'");
             if(i < function.Parameters.Count - 1) {
@@ -174,12 +174,7 @@ public class DotnetGenerator {
             if(global.Value is null) continue;
             switch (global.Type) {
                 case Type.Integer:
-                    if ((int)global.Value >= -1 && (int)global.Value <= 8) {
-                        sw.WriteLine($"    ldc.i4.{(int)global.Value}");
-                    }
-                    else {
-                        sw.WriteLine($"    ldc.i4 {(int)global.Value} ");
-                    }
+                    sw.WriteLine($"    {LoadConstant((int)global.Value)}");
                     sw.WriteLine($"    stsfld int32 {projectName}.Program::{global.Name}");
                     break;
                 case Type.String:
@@ -187,7 +182,7 @@ public class DotnetGenerator {
                     sw.WriteLine($"    stsfld string {projectName}.Program::{global.Name}");
                     break;
                 case Type.Boolean:
-                    sw.WriteLine($"    ldc.i4.{((bool)global.Value ? 1 : 0)}");
+                    sw.WriteLine($"    {LoadConstant((bool)global.Value)}");
                     sw.WriteLine($"    stsfld bool {projectName}.Program::{global.Name}");
                     break;
                 default:
@@ -226,7 +221,7 @@ public class DotnetGenerator {
                 break;
             case BinaryOperationType.NotEquals:
                 sw.WriteLine("    ceq");
-                sw.WriteLine("    ldc.i4.0");
+                sw.WriteLine("    "+LoadConstant(0));
                 sw.WriteLine("    ceq");
                 break;
             case BinaryOperationType.LessThan:
@@ -234,7 +229,7 @@ public class DotnetGenerator {
                 break;
             case BinaryOperationType.LessEqualThan:
                 sw.WriteLine("    cgt");
-                sw.WriteLine("    ldc.i4.0");
+                sw.WriteLine("    "+LoadConstant(0));
                 sw.WriteLine("    ceq");
                 break;
             case BinaryOperationType.GreaterThan:
@@ -242,7 +237,7 @@ public class DotnetGenerator {
                 break;
             case BinaryOperationType.GreaterEqualThan:
                 sw.WriteLine("    clt");
-                sw.WriteLine("    ldc.i4.0");
+                sw.WriteLine("    "+LoadConstant(0));
                 sw.WriteLine("    ceq");
                 break;
             case BinaryOperationType.And:
@@ -277,7 +272,7 @@ public class DotnetGenerator {
         sw.WriteLine(")");
         
         if (call.Dest is not null && returnType != Type.Void) {
-            sw.WriteLine(Load(call.Dest, localsAllocator, parameterAllocator));
+            sw.WriteLine(Store(call.Dest, localsAllocator, parameterAllocator));
         }
     }
 
@@ -298,17 +293,17 @@ public class DotnetGenerator {
         if (load.Value is int i) {
             // load integer constant onto stack
             if (i >= -1 && i <= 8) {
-                sw.WriteLine($"    ldc.i4.{i}");
+                sw.WriteLine($"    {LoadConstant(i)}");
             }
             else {
-                sw.WriteLine($"    ldc.i4 {i}");
+                sw.WriteLine($"    {LoadConstant(i)}");
             }
 
             // store into destination
             sw.WriteLine(Store(load.Dest, localsAllocator, parameterAllocator));
         }else if (load.Value is bool b) {
             // load bool onto stack
-            sw.WriteLine($"    ldc.i4.{(b ? 1 : 0)}");
+            sw.WriteLine($"    {LoadConstant(b)}");
             // store into destination
             sw.WriteLine(Store(load.Dest, localsAllocator, parameterAllocator));
         }
@@ -349,7 +344,7 @@ public class DotnetGenerator {
     
     private void Generate(ILReturn @return, LocalsAllocator localsAllocator, ParameterAllocator parameterAllocator) {
         if (@return.Value is not null && @return.Value.Type != Type.Void) {
-            sw.WriteLine(Load(@return.Value, localsAllocator, parameterAllocator));
+            sw.WriteLine("    "+Load(@return.Value, localsAllocator, parameterAllocator));
         }
         sw.WriteLine("    ret");
     }
@@ -364,7 +359,7 @@ public class DotnetGenerator {
         sw.WriteLine(Load(unaryOp.Operand, localsAllocator, parameterAllocator));
         switch (unaryOp.Op) {
             case UnaryOperationType.Not:
-                sw.WriteLine("    ldc.i4.0");
+                sw.WriteLine("    "+LoadConstant(0));
                 sw.WriteLine("    ceq");
                 break;
             default:
@@ -612,18 +607,18 @@ public class DotnetGenerator {
 
     private string Store(ILAddress address, LocalsAllocator localsAllocator, ParameterAllocator parameterAllocator) {
         return address.AddressType switch {
-            ILAddressType.Global => $"stsfld {TypeToILType(address.Type)} {projectName}.Program::{address.Name}",
-            ILAddressType.Stack or ILAddressType.Temporary => StoreLocal(localsAllocator.GetIndex(address)),
-            ILAddressType.Parameter => parameterAllocator.GetStoreText(address.Name),
+            ILAddressType.Global => $"    stsfld {TypeToILType(address.Type)} {projectName}.Program::{address.Name}",
+            ILAddressType.Stack or ILAddressType.Temporary => "    "+StoreLocal(localsAllocator.GetIndex(address)),
+            ILAddressType.Parameter => "    "+parameterAllocator.GetStoreText(address.Name),
             _ => throw new NotSupportedException($"Address type {address.AddressType} not supported")
         };
     }
     
     private string Load(ILAddress address, LocalsAllocator localsAllocator, ParameterAllocator parameterAllocator) {
         return address.AddressType switch {
-            ILAddressType.Global => $"ldsfld {TypeToILType(address.Type)} {projectName}.Program::{address.Name}",
-            ILAddressType.Stack or ILAddressType.Temporary => LoadLocal(localsAllocator.GetIndex(address)),
-            ILAddressType.Parameter => parameterAllocator.GetLoadText(address.Name),
+            ILAddressType.Global => $"    ldsfld {TypeToILType(address.Type)} {projectName}.Program::{address.Name}",
+            ILAddressType.Stack or ILAddressType.Temporary => "    "+LoadLocal(localsAllocator.GetIndex(address)),
+            ILAddressType.Parameter => "    "+parameterAllocator.GetLoadText(address.Name),
             _ => throw new NotSupportedException($"Address type {address.AddressType} not supported")
         };
     }
@@ -638,5 +633,15 @@ public class DotnetGenerator {
         if(index <= 3) return "ldloc." + index;
         if(index <= 255) return  "ldloc.s " + index;
         return "ldloc " + index;
+    }
+
+    private string LoadConstant(int value) {
+        if(value == -1) return "ldc.i4.m1";
+        if(value >= 0 && value <= 8) return "ldc.i4." + value;
+        if(value >= -128 && value <= 127) return "ldc.i4.s " + value;
+        return "ldc.i4 " + value;
+    }
+    private string LoadConstant(bool value) {
+        return value ? LoadConstant(1) : LoadConstant(0);
     }
 }
