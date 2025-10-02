@@ -90,12 +90,12 @@ public class IlGenerator {
                     instructions.Add(new ILReturn());
                     return;
                 }
-                ILAddress returnValue = Generate(returnStmt.Expression, instructions);
+                ILAddress returnValue = Generate(returnStmt.Expression, instructions, scopeData);
                 instructions.Add(new ILReturn(returnValue));
                 ReleaseTemp(returnValue);
                 break;
             case IfStatementNode ifStmt:
-                ILAddress ifCondTemp = Generate(ifStmt.Condition, instructions);
+                ILAddress ifCondTemp = Generate(ifStmt.Condition, instructions, scopeData);
                 string elseLabel = $"{namespaceName}_else_{idx++}";
                 string endIfLabel = $"{namespaceName}_endif_{idx++}";
                 ILAddress notCondTemp = GetTemp(Type.Boolean);
@@ -127,7 +127,7 @@ public class IlGenerator {
                 
                 instructions.Add(new ILLabel(startLabel));
                 
-                ILAddress whileCondTemp = Generate(whileStmt.Condition, instructions);
+                ILAddress whileCondTemp = Generate(whileStmt.Condition, instructions, scopeData);
                 ILAddress whileNotCondTemp = GetTemp(Type.Boolean);
                 instructions.Add(new ILUnaryOp(whileNotCondTemp, UnaryOperationType.Not, whileCondTemp));
                 ReleaseTemp(whileCondTemp);
@@ -136,19 +136,22 @@ public class IlGenerator {
 
                 foreach (StatementNode stmt in whileStmt.Body.Statements)
                 {
-                    Generate(stmt, instructions, namespaceName + $"_while{idx-1}body", ref idx);
+                    Generate(stmt, instructions, namespaceName + $"_while{idx-1}body", ref idx, scopeData);
                 }
                 
                 instructions.Add(new ILGoto(startLabel));
                 instructions.Add(new ILLabel(endLabel));
                 break;
             case AssignmentNode assignStmt:
-                ILAddress valueTemp = Generate(assignStmt.AssignedValue, instructions);
-                ILAddressType type = program.TopLevelNodes.OfType<FieldDeclarationNode>()
-                    .Any(x => x.FieldName == assignStmt.VariableName)
-                    ? ILAddressType.Global
-                    : ILAddressType.Stack;
-                ILAddress addr = new ILAddress(assignStmt.VariableName, type, assignStmt.AssignedValue.ExpressionType);
+                ILAddress valueTemp = Generate(assignStmt.AssignedValue, instructions, scopeData);
+                SemanticAnalyzer.VariableData data = scopeData.GetVariable(assignStmt.VariableName)!;
+                ILAddressType type;
+                if (data.FieldDeclaration is not null) type = ILAddressType.Global;
+                else if(data.VariableDeclarationNode is not null) type = ILAddressType.Stack;
+                else if(data.ParameterNode is not null) type = ILAddressType.Parameter;
+                else throw new Exception("Variable not found in any scope");
+                
+                ILAddress addr = new(assignStmt.VariableName, type, assignStmt.AssignedValue.ExpressionType);
                 if (addr.AddressType == ILAddressType.Global) {
                     addr.Label = globalLabels[addr.Name];
                 }
@@ -164,7 +167,7 @@ public class IlGenerator {
                 ReleaseTemp(valueTemp);
                 break;
             case WriteNode writeStmt:
-                ILAddress writeTemp = Generate(writeStmt.Expression, instructions);
+                ILAddress writeTemp = Generate(writeStmt.Expression, instructions, scopeData);
                 instructions.Add(new ILWrite(writeTemp, writeStmt.Expression.ExpressionType));
                 ReleaseTemp(writeTemp);
                 break;
@@ -175,15 +178,12 @@ public class IlGenerator {
             case FunctionCallStatementNode funcCallStmt:
                 FunctionCallExpressionNode funcCall = funcCallStmt.FunctionCallExpression;
                 List<ILAddress> args = [];
-                args.AddRange(funcCall.Arguments.Select(arg => Generate(arg, instructions)));
-                ILAddress tCall = GetTemp(funcCall.ExpressionType);
-                instructions.Add(new ILCall(tCall, funcCall.FunctionName, args));
+                args.AddRange(funcCall.Arguments.Select(arg => Generate(arg, instructions, scopeData)));
+                instructions.Add(new ILCall(null, funcCall.FunctionName, args));
                 foreach (ILAddress arg in args)
                 {
                     ReleaseTemp(arg);
                 }
-                // como eh um statement, nao precisamos guardar o retorno da func.
-                ReleaseTemp(tCall);
                 break;
             case VariableDeclarationNode varDecl:
                 instructions.Add(new ILVar(varDecl.VariableName, varDecl.VariableType));
@@ -191,7 +191,7 @@ public class IlGenerator {
                 {
                     break;
                 }
-                ILAddress initValueTemp = Generate(varDecl.InitValue, instructions);
+                ILAddress initValueTemp = Generate(varDecl.InitValue, instructions, scopeData);
                 if (varDecl.InitValue.ExpressionType == Type.String)
                 {
                     instructions.Add(new ILLoadPtr(new ILAddress(varDecl.VariableName, ILAddressType.Stack, Type.String), initValueTemp));
@@ -205,8 +205,7 @@ public class IlGenerator {
         }
     }
 
-    private ILAddress Generate(ExpressionNode expression, List<ILInstruction> instructions)
-    {
+    private ILAddress Generate(ExpressionNode expression, List<ILInstruction> instructions, SemanticAnalyzer.ScopeData? scopeData = null) {
         switch (expression) {
             case LiteralExpressionNode lit:
                 if (lit.Type == Type.String)
@@ -221,10 +220,15 @@ public class IlGenerator {
                 instructions.Add(new ILLoad(tLit, lit.Value));
                 return tLit;
             case IdentifierExpressionNode identifier:
-                ILAddressType type = program.TopLevelNodes.OfType<FieldDeclarationNode>()
-                    .Any(x => x.FieldName == identifier.Name)
-                    ? ILAddressType.Global
-                    : ILAddressType.Stack;
+                ILAddressType type;
+                if (scopeData is null) {
+                    throw new NullReferenceException("No scope data for Expression Generation");
+                }
+                SemanticAnalyzer.VariableData data = scopeData?.GetVariable(identifier.Name)!;
+                if(data.FieldDeclaration is not null) type = ILAddressType.Global;
+                else if(data.VariableDeclarationNode is not null) type = ILAddressType.Stack;
+                else if(data.ParameterNode is not null) type = ILAddressType.Parameter;
+                else throw new Exception("Variable not found in any scope");
                 ILAddress addr = new(identifier.Name, type, identifier.ExpressionType);
                 if (addr.AddressType == ILAddressType.Global) {
                     addr.Label = globalLabels[addr.Name];
@@ -271,8 +275,9 @@ public class IlGenerator {
         }
     }
     
-    private void ReleaseTemp(ILAddress temp)
+    private void ReleaseTemp(ILAddress? temp)
     {
+        if(temp is null) return;
         if(temp.AddressType != ILAddressType.Temporary)
         {
             return;

@@ -449,6 +449,7 @@ public class SemanticAnalyzer {
                             $"Tipo do argumento {i + 1} da função '{funcCallExpr.FunctionName}' não corresponde ao tipo esperado '{expectedType}'.",
                             argExpr.LineNumber, argExpr.ColumnNumber));
                     }
+                    CheckExpression(argExpr, scope);
                 }
             }
         }
