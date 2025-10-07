@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace FortallCompiler.IL;
+namespace FortallCompiler.Fil;
 
 public class ILProgram
 {

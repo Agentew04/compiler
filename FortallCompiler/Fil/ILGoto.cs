@@ -1,4 +1,4 @@
-﻿namespace FortallCompiler.IL;
+﻿namespace FortallCompiler.Fil;
 
 public class ILGoto : ILInstruction
 {

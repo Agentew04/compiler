@@ -1,7 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
+using System.Reflection.Emit;
 using FortallCompiler.Ast;
-using FortallCompiler.IL;
+using FortallCompiler.Fil;
 using FortallCompiler.Steps;
 
 namespace FortallCompiler;
@@ -341,6 +342,42 @@ public static class Program
     }
 
     private static bool DotnetNativeFlow(string dllPath, Stopwatch sw, ref double totalTime, string name, Target target) {
-        throw new NotImplementedException();
+        string projectDir = name + '-' + target switch {
+            Target.Native => "native",
+            Target.WasmBrowser => "wasm-browser",
+            Target.WasmDesktop => "wasm-desktop",
+            _ => "unknown"
+        };
+        if (Directory.Exists(projectDir)) {
+            Directory.Delete(projectDir, true);
+        }
+  
+        Directory.CreateDirectory(projectDir);
+
+        if (target == Target.Native) {
+            DotnetNativePacker packer = new();
+            Console.WriteLine("Comecando a empacotamento nativo com AOT...");
+            sw.Restart();
+            if (!packer.Pack(projectDir, dllPath, name, out string exePath)) {
+                sw.Stop();
+                Console.WriteLine("Ocorreu um erro no empacotamento :(");
+                return false;
+            }
+            sw.Stop();
+            totalTime += sw.Elapsed.TotalMilliseconds;
+            Console.WriteLine($"Empacotamento nativo bem sucedido em {sw.Elapsed.TotalMilliseconds}ms!");
+            Console.WriteLine($"Tempo total de execucao: {totalTime}ms");
+            Console.WriteLine("Executar? (S/N)");
+            string input = Console.ReadLine() ?? "S";
+            if (input is "S" or "s") {
+                using Process process = Process.Start(exePath);
+            }
+        }
+        else if(target == Target.WasmBrowser) {
+            
+            return false;
+        }
+
+        return true;
     }
 }

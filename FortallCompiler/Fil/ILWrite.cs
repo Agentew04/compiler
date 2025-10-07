@@ -1,6 +1,6 @@
 ﻿using Type = FortallCompiler.Ast.Type;
 
-namespace FortallCompiler.IL;
+namespace FortallCompiler.Fil;
 
 public class ILWrite : ILInstruction
 {

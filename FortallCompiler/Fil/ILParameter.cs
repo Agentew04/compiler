@@ -1,4 +1,4 @@
-﻿namespace FortallCompiler.IL;
+﻿namespace FortallCompiler.Fil;
 
 public class ILParameter {
     public string Name { get; } = string.Empty;

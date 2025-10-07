@@ -1,6 +1,6 @@
 ﻿using System.Text;
 using FortallCompiler.Ast;
-using FortallCompiler.IL;
+using FortallCompiler.Fil;
 using Type = FortallCompiler.Ast.Type;
 
 namespace FortallCompiler.Steps;
@@ -815,27 +815,12 @@ public class MipsGenerator
             switch (instruction)
             {
                 case ILBinaryOp ilBinaryOp:
-                    if (ilBinaryOp.Left.AddressType == ILAddressType.Temporary)
-                    {
-                        temporaries.Add(ilBinaryOp.Left);
-                    }
-                    if (ilBinaryOp.Right.AddressType == ILAddressType.Temporary)
-                    {
-                        temporaries.Add(ilBinaryOp.Right);
-                    }
                     if (ilBinaryOp.Dest.AddressType == ILAddressType.Temporary)
                     {
                         temporaries.Add(ilBinaryOp.Dest);
                     }
                     break;
                 case ILCall ilCall:
-                    foreach (ILAddress arg in ilCall.Arguments)
-                    {
-                        if (arg.AddressType == ILAddressType.Temporary)
-                        {
-                            temporaries.Add(arg);
-                        }
-                    }
                     if(ilCall.Dest is not null && ilCall.Dest.AddressType == ILAddressType.Temporary)
                     {
                         temporaries.Add(ilCall.Dest);
@@ -844,10 +829,6 @@ public class MipsGenerator
                 case ILGoto ilGoto:
                     break;
                 case ILIfGoto ilIfGoto:
-                    if (ilIfGoto.Condition.AddressType == ILAddressType.Temporary)
-                    {
-                        temporaries.Add(ilIfGoto.Condition);
-                    }
                     break;
                 case ILLabel ilLabel:
                     break;
@@ -861,10 +842,6 @@ public class MipsGenerator
                     if (ilMove.Dest.AddressType == ILAddressType.Temporary)
                     {
                         temporaries.Add(ilMove.Dest);
-                    }
-                    if (ilMove.Src.AddressType == ILAddressType.Temporary)
-                    {
-                        temporaries.Add(ilMove.Src);
                     }
                     break;
                 case ILRead ilRead:
@@ -884,33 +861,21 @@ public class MipsGenerator
                     {
                         temporaries.Add(ilUnaryOp.Dest);
                     }
-                    if (ilUnaryOp.Operand.AddressType == ILAddressType.Temporary)
-                    {
-                        temporaries.Add(ilUnaryOp.Operand);
-                    }
                     break;
                 case ILVar ilVar:
                     break;
                 case ILWrite ilWrite:
-                    if (ilWrite.Src.AddressType == ILAddressType.Temporary)
-                    {
-                        temporaries.Add(ilWrite.Src);
-                    }
                     break;
                 case ILLoadPtr ilLoadPtr:
                     if (ilLoadPtr.Dest.AddressType == ILAddressType.Temporary)
                     {
                         temporaries.Add(ilLoadPtr.Dest);
                     }
-                    if (ilLoadPtr.Src.AddressType == ILAddressType.Temporary)
-                    {
-                        temporaries.Add(ilLoadPtr.Src);
-                    }
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(instruction));
             }
         }
-        return temporaries.Order().ToList();
+        return temporaries.ToList();
     }
 }

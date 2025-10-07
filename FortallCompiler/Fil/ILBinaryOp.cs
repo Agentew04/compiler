@@ -1,6 +1,6 @@
 ﻿using FortallCompiler.Ast;
 
-namespace FortallCompiler.IL;
+namespace FortallCompiler.Fil;
 
 public class ILBinaryOp : ILInstruction
 {

@@ -39,4 +39,8 @@
       <ProjectReference Include="..\SimuladorSAAE\SAAE.Engine\SAAE.Engine.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Mips\" />
+    </ItemGroup>
+
 </Project>
