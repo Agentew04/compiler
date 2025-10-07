@@ -2,7 +2,7 @@
 
 namespace FortallCompiler.Il;
 
-public struct Assembly {
+public readonly struct Assembly {
     public string Name { get; init; }
     
     public bool IsExtern { get; init; }

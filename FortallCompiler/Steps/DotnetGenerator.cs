@@ -1,13 +1,14 @@
 ﻿using System.Text;
 using FortallCompiler.Ast;
 using FortallCompiler.Fil;
+using FortallCompiler.Il;
 using Type = FortallCompiler.Ast.Type;
 
 namespace FortallCompiler.Steps;
 
 public class DotnetGenerator {
 
-    private ILProgram program = null!;
+    private ILProgram filProg = null!;
     private string projectName = null!; 
     private bool createExe;
     private bool readStringRequested;
@@ -16,9 +17,13 @@ public class DotnetGenerator {
     private StreamWriter sw = null!;
     
     private Dictionary<string, Type> functionsReturnTypeMap = [];
+
+    private Il.Program ilProg;
     
     public void Generate(ILProgram program, Stream outputStream, string name, bool createExe) {
-        this.program = program;
+        filProg = program;
+        ilProg = new Il.Program();
+        
         this.createExe = createExe;
         sw = new StreamWriter(outputStream, leaveOpen: true);
         projectName = name;
@@ -28,6 +33,17 @@ public class DotnetGenerator {
     }
 
     private void WriteHeader() {
+        ilProg.ReferencedAssemblies.Add(new Assembly() {
+            Name = "System.Private.CoreLib",
+            IsExtern = true
+        });
+        ilProg.Assembly = new Assembly() {
+            IsExtern = false,
+            Name = projectName
+        };
+        ilProg.Module = new Module() {
+            Name = projectName + "." + (createExe ? "exe" : "dll"),
+        };
         sw.WriteLine(".assembly extern System.Private.CoreLib {}");
         // sw.WriteLine(".assembly extern System.Console {}");
         // sw.WriteLine(".assembly extern mscorlib {}");
@@ -36,22 +52,50 @@ public class DotnetGenerator {
     }
 
     private void WriteClass() {
+        Class @class = new() {
+            Name = "Program",
+            Namespace = projectName,
+            Access = Accessibility.Public,
+            BaseClass = new ClassReference() {
+                Name = "Object",
+                Assembly = "System.Private.CoreLib",
+                Namespace = "System"
+            }
+        };
+        ilProg.Classes.Add(@class);
         sw.WriteLine($".class public auto ansi beforefieldinit {projectName}.Program extends [System.Private.CoreLib]System.Object {{");
         
         // create fields
         sw.WriteLine();
         sw.WriteLine("  // Fields");
-        foreach (ILGlobalVariable field in program.Globals) {
+        foreach (ILGlobalVariable field in filProg.Globals) {
             sw.Write("  .field public static ");
             sw.Write(TypeToILType(field.Type));
             sw.Write(" ");
             sw.WriteLine(field.Name);
+            
+            Il.Type type = field.Type switch {
+                Type.Integer => Il.Type.Int32,
+                Type.String => Il.Type.String,
+                Type.Boolean => Il.Type.Boolean,
+                Type.Void => Il.Type.Void,
+                _ => throw new NotSupportedException($"Type {field.Type} not supported")
+            };
+            
+            @class.Fields.Add(new Field() {
+                IsStatic = true,
+                Access = Accessibility.Private,
+                Name = field.Name,
+                Type = type 
+            });
         }
         sw.WriteLine();
 
+        // create caches
+        filProg.Functions.ForEach(x => functionsReturnTypeMap[x.Name] = x.ReturnType);
+        
         // create functions
-        program.Functions.ForEach(x => functionsReturnTypeMap[x.Name] = x.ReturnType);
-        foreach(ILFunction function in program.Functions) {
+        foreach(ILFunction function in filProg.Functions) {
             WriteFunction(function);
             sw.WriteLine();
         }
@@ -158,7 +202,7 @@ public class DotnetGenerator {
     }
 
     private void WriteConstructor() {
-        if (program.Globals.Count == 0) {
+        if (filProg.Globals.Count == 0) {
             return;
         }
         
@@ -170,7 +214,7 @@ public class DotnetGenerator {
         // field initialization
         sw.WriteLine();
         sw.WriteLine("    // Field initialization");
-        foreach (ILGlobalVariable global in program.Globals) {
+        foreach (ILGlobalVariable global in filProg.Globals) {
             if(global.Value is null) continue;
             switch (global.Type) {
                 case Type.Integer:
